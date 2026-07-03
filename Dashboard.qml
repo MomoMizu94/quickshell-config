@@ -23,10 +23,29 @@ PanelWindow {
     property real diskValue: 0
 
     // For clock
-    property string currentTime: Qt.formatTime(new Date(), "HH:mm")
+    property string currentTime: Qt.formatTime(new Date(), "h:mm AP")
     property string currentDate: Qt.formatDate(new Date(), "dddd, d MMMM yyyy")
 
     property string userName: Quickshell.env("USER")
+
+    property string weatherTemp: "--"
+    property string weatherDesc: ""
+    property string weatherLocation: ""
+    property string weatherHigh: "--"
+    property string weatherLow: "--"
+    property string weatherHumidity: "--"
+    property string weatherWindSpeed: "--"
+    property string weatherWindDir: ""
+
+    property string sysOs: ""
+    property string sysKernel: ""
+    property string sysWm: Quickshell.env("XDG_CURRENT_DESKTOP")
+    property string sysUptime: ""
+
+    property bool wifiEnabled: false
+    property bool bluetoothEnabled: false
+    property bool dndEnabled: false
+    property bool nightEnabled: false
 
     readonly property var monthNames: [
         "January", "February", "March", "April", "May", "June",
@@ -82,7 +101,7 @@ PanelWindow {
 
         onTriggered: {
             // Clock
-            dashboard.currentTime = Qt.formatTime(new Date(), "HH:mm")
+            dashboard.currentTime = Qt.formatTime(new Date(), "h:mm AP")
             dashboard.currentDate = Qt.formatDate(new Date(), "dddd, d MMMM yyyy")
 
             // Only update stats when on correct tab
@@ -90,8 +109,88 @@ PanelWindow {
                 if (!cpuProc.running) cpuProc.running = true
                 if (!ramProc.running) ramProc.running = true
                 if (!diskProc.running) diskProc.running = true
+                if (!uptimeProc.running) uptimeProc.running = true
             }
         }
+    }
+
+    // ── System info ──
+    Process {
+        id: osProc
+        command: ["bash", "-c", "grep PRETTY_NAME /etc/os-release | cut -d'\"' -f2"]
+        stdout: StdioCollector { id: osOut }
+        onExited: dashboard.sysOs = osOut.text.trim()
+    }
+    Process {
+        id: kernelProc
+        command: ["uname", "-r"]
+        stdout: StdioCollector { id: kernelOut }
+        onExited: dashboard.sysKernel = kernelOut.text.trim()
+    }
+    Process {
+        id: uptimeProc
+        command: ["bash", "-c", "awk '{h=int($1/3600);m=int(($1%3600)/60);print h\"h \"m\"m\"}' /proc/uptime"]
+        stdout: StdioCollector { id: uptimeOut }
+        onExited: dashboard.sysUptime = uptimeOut.text.trim()
+    }
+    Process {
+        id: wifiCheckProc
+        command: ["bash", "-c", "nmcli radio wifi"]
+        stdout: StdioCollector { id: wifiCheckOut }
+        onExited: dashboard.wifiEnabled = wifiCheckOut.text.trim() === "enabled"
+    }
+    Process {
+        id: btCheckProc
+        command: ["bash", "-c", "bluetoothctl show | grep 'Powered:' | awk '{print $2}'"]
+        stdout: StdioCollector { id: btCheckOut }
+        onExited: dashboard.bluetoothEnabled = btCheckOut.text.trim() === "yes"
+    }
+    Process {
+        id: nightCheckProc
+        command: ["bash", "-c", "pgrep -x wlsunset > /dev/null && echo yes || echo no"]
+        stdout: StdioCollector { id: nightCheckOut }
+        onExited: dashboard.nightEnabled = nightCheckOut.text.trim() === "yes"
+    }
+    Process { id: actionProc; command: ["echo"] }
+
+    Component.onCompleted: {
+        osProc.running = true
+        kernelProc.running = true
+        uptimeProc.running = true
+        wifiCheckProc.running = true
+        btCheckProc.running = true
+        nightCheckProc.running = true
+    }
+
+    // ── Weather ──
+    Process {
+        id: weatherProc
+        command: ["bash", "-c", "curl -sf 'https://wttr.in?format=j1'"]
+        stdout: StdioCollector { id: weatherOut }
+        onExited: {
+            try {
+                const d = JSON.parse(weatherOut.text)
+                const cur = d.current_condition[0]
+                const area = d.nearest_area[0]
+                const today = d.weather[0]
+                dashboard.weatherTemp = cur.temp_C
+                dashboard.weatherDesc = cur.weatherDesc[0].value
+                dashboard.weatherLocation = area.areaName[0].value
+                dashboard.weatherHigh = today.maxtempC
+                dashboard.weatherLow = today.mintempC
+                dashboard.weatherHumidity = cur.humidity
+                dashboard.weatherWindSpeed = cur.windspeedKmph
+                dashboard.weatherWindDir = cur.winddir16Point
+            } catch(e) {}
+        }
+    }
+
+    Timer {
+        interval: 600000
+        running: dashboard.visible
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: if (!weatherProc.running) weatherProc.running = true
     }
 
     function greeting() {
@@ -105,6 +204,40 @@ PanelWindow {
             return "Good afternoon";
 
         return "Good evening";
+    }
+
+    function toggleWifi() {
+        actionProc.command = wifiEnabled
+            ? ["nmcli", "radio", "wifi", "off"]
+            : ["nmcli", "radio", "wifi", "on"]
+        actionProc.startDetached()
+        wifiEnabled = !wifiEnabled
+    }
+    function toggleBluetooth() {
+        actionProc.command = bluetoothEnabled
+            ? ["bluetoothctl", "power", "off"]
+            : ["bluetoothctl", "power", "on"]
+        actionProc.startDetached()
+        bluetoothEnabled = !bluetoothEnabled
+    }
+    function toggleNight() {
+        actionProc.command = nightEnabled
+            ? ["pkill", "wlsunset"]
+            : ["wlsunset", "-T", "4500"]
+        actionProc.startDetached()
+        nightEnabled = !nightEnabled
+    }
+
+    function weatherIcon(desc) {
+        const d = (desc || "").toLowerCase()
+        if (d.includes("thunder") || d.includes("storm")) return "󰙾"
+        if (d.includes("snow") || d.includes("sleet") || d.includes("blizzard")) return "󰼶"
+        if (d.includes("rain") || d.includes("drizzle") || d.includes("shower")) return "󰖗"
+        if (d.includes("fog") || d.includes("mist") || d.includes("haze")) return "󰖑"
+        if (d.includes("overcast")) return "󰅣"
+        if (d.includes("cloud")) return ""
+        if (d.includes("clear") || d.includes("sunny") || d.includes("sun")) return "󰖨"
+        return ""
     }
 
     MouseArea {
@@ -142,10 +275,11 @@ PanelWindow {
 
                 Repeater {
                     model: [
-                        { icon: "󰂚", label: "Dashboard"   },
+                        { icon: "󰕮", label: "Dashboard"   },
                         { icon: "󰃭", label: "Calendar" },
                         { icon: "󰝚", label: "Media"    },
                         { icon: "󰈸", label: "Stats"    }
+                        // Workspaces??
                     ]
                     delegate: Item {
                         required property var modelData
@@ -214,49 +348,282 @@ PanelWindow {
                 Layout.fillHeight: true
                 clip: true
 
-                // ── Tab 0: Notifications ──
+                // ── Tab 0: Dashboard ──
                 ColumnLayout {
                     anchors.fill: parent
                     visible: dashboard.activeTab === 0
                     spacing: 8
 
-                    Rectangle {
+                    RowLayout {
                         Layout.fillWidth: true
-                        radius: 10
+                        spacing: 8
 
-                        color: Config.colors.Yellow
-                        border.width: 4
-                        border.color: Config.colors.DarkTeal
+                        Rectangle {
+                            id: greetingCard
+                            Layout.fillWidth: true
+                            radius: 10
+                            color: Config.colors.Yellow
+                            border.width: 4
+                            border.color: Config.colors.DarkTeal
+                            implicitHeight: greetingLayout.implicitHeight + 24
 
-                        implicitHeight: greetingLayout.implicitHeight + 24
+                            ColumnLayout {
+                                id: greetingLayout
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 4
 
-                        ColumnLayout {
-                            id: greetingLayout
-                            anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 4
+                                Text {
+                                    text: dashboard.greeting() + ", " + dashboard.userName + "!"
+                                    color: Config.colors.DarkTeal
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize + 4
+                                    font.bold: true
+                                }
 
-                            Text {
-                                text: dashboard.greeting() + ", " + dashboard.userName + "!"
-                                color: Config.colors.DarkTeal
-                                font.family: Config.bar.fontFamily
-                                font.pixelSize: Config.bar.fontSize + 4
-                                font.bold: true
+                                Text {
+                                    text: dashboard.currentTime
+                                    color: Config.colors.DarkTeal
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize + 12
+                                    font.bold: true
+                                }
+
+                                Text {
+                                    text: dashboard.currentDate
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 2
+                                }
                             }
+                        }
 
-                            Text {
-                                text: dashboard.currentTime
-                                color: Config.colors.DarkTeal
-                                font.family: Config.bar.fontFamily
-                                font.pixelSize: Config.bar.fontSize + 12
-                                font.bold: true
+                        Rectangle {
+                            Layout.preferredWidth: 500
+                            implicitHeight: greetingCard.implicitHeight * 2
+                            radius: 10
+                            color: Config.colors.Yellow
+                            border.width: 4
+                            border.color: Config.colors.DarkTeal
+                            clip: true
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 4
+
+                                Text {
+                                    text: "WEATHER"
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 8
+                                    font.bold: true
+                                    font.letterSpacing: 1.5
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Text {
+                                        text: dashboard.weatherTemp + "°"
+                                        color: Config.colors.DarkTeal
+                                        font.family: Config.bar.fontFamily
+                                        font.pixelSize: Config.bar.fontSize + 50
+                                        font.bold: true
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                    Text {
+                                        text: dashboard.weatherIcon(dashboard.weatherDesc)
+                                        font.family: Config.bar.fontFamily
+                                        font.pixelSize: Config.bar.fontSize + 80
+                                    }
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    visible: dashboard.weatherLocation !== ""
+                                    text: dashboard.weatherLocation
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 5
+                                    elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: dashboard.weatherDesc !== "" ? dashboard.weatherDesc : "Loading…"
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 5
+                                    elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    text: "H: " + dashboard.weatherHigh + "°  L: " + dashboard.weatherLow
+                                        + "°  ·  " + dashboard.weatherHumidity + "% humidity"
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 5
+                                }
+
+                                Text {
+                                    text: "Wind: " + dashboard.weatherWindSpeed + " km/h " + dashboard.weatherWindDir
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 5
+                                }
+
+                                Item { Layout.fillHeight: true }
                             }
+                        }
+                    }
 
-                            Text {
-                                text: dashboard.currentDate
-                                color: Config.colors.Grey
-                                font.family: Config.bar.fontFamily
-                                font.pixelSize: Config.bar.fontSize - 2
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        // ── System info ──
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 140
+                            radius: 10
+                            color: Config.colors.Yellow
+                            border.width: 4
+                            border.color: Config.colors.DarkTeal
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 16
+                                spacing: 8
+
+                                Repeater {
+                                    model: [
+                                        { icon: "󰣇", label: "os",     value: dashboard.sysOs     },
+                                        { icon: "󰌢", label: "kernel", value: dashboard.sysKernel },
+                                        { icon: "󱂬", label: "wm",     value: dashboard.sysWm     },
+                                        { icon: "󰅐", label: "uptime", value: dashboard.sysUptime },
+                                    ]
+                                    delegate: RowLayout {
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        spacing: 10
+
+                                        Text {
+                                            text: modelData.icon
+                                            color: Config.colors.Orange
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize + 2
+                                        }
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 1
+                                            Text {
+                                                text: modelData.label
+                                                color: Config.colors.Grey
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: Config.bar.fontSize - 7
+                                                font.letterSpacing: 1
+                                                font.bold: true
+                                            }
+                                            Text {
+                                                text: modelData.value || "…"
+                                                color: Config.colors.DarkTeal
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: Config.bar.fontSize - 3
+                                                font.bold: true
+                                                elide: Text.ElideRight
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── Quick toggles ──
+                        Rectangle {
+                            Layout.preferredWidth: 320
+                            height: 140
+                            radius: 10
+                            color: Config.colors.Yellow
+                            border.width: 4
+                            border.color: Config.colors.DarkTeal
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 6
+
+                                Text {
+                                    text: "QUICK TOGGLES"
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 8
+                                    font.bold: true
+                                    font.letterSpacing: 1.5
+                                }
+
+                                GridLayout {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    columns: 2
+                                    rowSpacing: 6
+                                    columnSpacing: 6
+
+                                    Rectangle {
+                                        Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                                        color: dashboard.wifiEnabled ? Qt.rgba(0.82, 0.53, 0.44, 0.3) : Qt.rgba(0,0,0,0.05)
+                                        ColumnLayout { anchors.centerIn: parent; spacing: 2
+                                            Text { Layout.alignment: Qt.AlignHCenter; text: "󰤨"
+                                                color: dashboard.wifiEnabled ? Config.colors.Orange : Config.colors.Grey
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize + 2 }
+                                            Text { Layout.alignment: Qt.AlignHCenter; text: "Wi-Fi"
+                                                color: dashboard.wifiEnabled ? Config.colors.DarkTeal : Config.colors.Grey
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize - 6 }
+                                        }
+                                        MouseArea { anchors.fill: parent; onClicked: dashboard.toggleWifi() }
+                                    }
+
+                                    Rectangle {
+                                        Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                                        color: dashboard.bluetoothEnabled ? Qt.rgba(0.82, 0.53, 0.44, 0.3) : Qt.rgba(0,0,0,0.05)
+                                        ColumnLayout { anchors.centerIn: parent; spacing: 2
+                                            Text { Layout.alignment: Qt.AlignHCenter; text: "󰂯"
+                                                color: dashboard.bluetoothEnabled ? Config.colors.Orange : Config.colors.Grey
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize + 2 }
+                                            Text { Layout.alignment: Qt.AlignHCenter; text: "Bluetooth"
+                                                color: dashboard.bluetoothEnabled ? Config.colors.DarkTeal : Config.colors.Grey
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize - 6 }
+                                        }
+                                        MouseArea { anchors.fill: parent; onClicked: dashboard.toggleBluetooth() }
+                                    }
+
+                                    Rectangle {
+                                        Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                                        color: dashboard.dndEnabled ? Qt.rgba(0.82, 0.53, 0.44, 0.3) : Qt.rgba(0,0,0,0.05)
+                                        ColumnLayout { anchors.centerIn: parent; spacing: 2
+                                            Text { Layout.alignment: Qt.AlignHCenter; text: "󰍷"
+                                                color: dashboard.dndEnabled ? Config.colors.Orange : Config.colors.Grey
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize + 2 }
+                                            Text { Layout.alignment: Qt.AlignHCenter; text: "DND"
+                                                color: dashboard.dndEnabled ? Config.colors.DarkTeal : Config.colors.Grey
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize - 6 }
+                                        }
+                                        MouseArea { anchors.fill: parent; onClicked: dashboard.dndEnabled = !dashboard.dndEnabled }
+                                    }
+
+                                    Rectangle {
+                                        Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                                        color: dashboard.nightEnabled ? Qt.rgba(0.82, 0.53, 0.44, 0.3) : Qt.rgba(0,0,0,0.05)
+                                        ColumnLayout { anchors.centerIn: parent; spacing: 2
+                                            Text { Layout.alignment: Qt.AlignHCenter; text: "󰌵"
+                                                color: dashboard.nightEnabled ? Config.colors.Orange : Config.colors.Grey
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize + 2 }
+                                            Text { Layout.alignment: Qt.AlignHCenter; text: "Night"
+                                                color: dashboard.nightEnabled ? Config.colors.DarkTeal : Config.colors.Grey
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize - 6 }
+                                        }
+                                        MouseArea { anchors.fill: parent; onClicked: dashboard.toggleNight() }
+                                    }
+                                }
                             }
                         }
                     }
