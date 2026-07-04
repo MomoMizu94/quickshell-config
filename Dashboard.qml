@@ -5,6 +5,7 @@ import Quickshell.Services.Mpris
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Widgets
+import QtQuick.Effects
 
 import "config.js" as Config
 
@@ -179,7 +180,7 @@ PanelWindow {
                 dashboard.weatherHigh = today.maxtempC
                 dashboard.weatherLow = today.mintempC
                 dashboard.weatherHumidity = cur.humidity
-                dashboard.weatherWindSpeed = cur.windspeedKmph
+                dashboard.weatherWindSpeed = (parseFloat(cur.windspeedKmph) / 3.6).toFixed(1)
                 dashboard.weatherWindDir = cur.winddir16Point
             } catch(e) {}
         }
@@ -466,7 +467,7 @@ PanelWindow {
                                 }
 
                                 Text {
-                                    text: "Wind: " + dashboard.weatherWindSpeed + " km/h " + dashboard.weatherWindDir
+                                    text: "Wind: " + dashboard.weatherWindSpeed + " m/s " + dashboard.weatherWindDir
                                     color: Config.colors.Grey
                                     font.family: Config.bar.fontFamily
                                     font.pixelSize: Config.bar.fontSize - 5
@@ -479,12 +480,13 @@ PanelWindow {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 8
+                        spacing: 20
 
                         // ── System info ──
                         Rectangle {
-                            Layout.fillWidth: true
-                            height: 140
+                            //Layout.fillWidth: true
+                            width: 500
+                            height: 160
                             radius: 10
                             color: Config.colors.Yellow
                             border.width: 4
@@ -493,44 +495,77 @@ PanelWindow {
                             RowLayout {
                                 anchors.fill: parent
                                 anchors.margins: 16
-                                spacing: 8
+                                spacing: 16
 
-                                Repeater {
-                                    model: [
-                                        { icon: "󰣇", label: "os",     value: dashboard.sysOs     },
-                                        { icon: "󰌢", label: "kernel", value: dashboard.sysKernel },
-                                        { icon: "󱂬", label: "wm",     value: dashboard.sysWm     },
-                                        { icon: "󰅐", label: "uptime", value: dashboard.sysUptime },
-                                    ]
-                                    delegate: RowLayout {
-                                        required property var modelData
-                                        Layout.fillWidth: true
-                                        spacing: 10
+                                // Profile picture
+                                Item {
+                                    width: 120; height: 120
 
-                                        Text {
-                                            text: modelData.icon
-                                            color: Config.colors.Orange
-                                            font.family: Config.bar.fontFamily
-                                            font.pixelSize: Config.bar.fontSize + 2
-                                        }
-                                        ColumnLayout {
+                                    Image {
+                                        id: profileImg
+                                        anchors.fill: parent
+                                        source: "file://" + Quickshell.env("HOME") + "/Pictures/ProfilePics/momo.png"
+                                        fillMode: Image.PreserveAspectCrop
+                                        layer.enabled: true
+                                        visible: false
+                                    }
+
+                                    Rectangle {
+                                        id: circleMask
+                                        anchors.fill: parent
+                                        radius: width / 2
+                                        visible: false
+                                        layer.enabled: true
+                                    }
+
+                                    MultiEffect {
+                                        source: profileImg
+                                        anchors.fill: profileImg
+                                        maskEnabled: true
+                                        maskSource: circleMask
+                                        maskThresholdMin: 0.5
+                                        maskSpreadAtMin: 1.0
+                                    }
+                                }
+
+                                // Stats column
+                                ColumnLayout {
+                                    //Layout.fillWidth: true
+                                    spacing: 6
+
+                                    Repeater {
+                                        model: [
+                                            { icon: "󰣇",    value: dashboard.sysOs     },
+                                            { icon: "󰌢",    value: dashboard.sysKernel },
+                                            { icon: "󱂬",    value: dashboard.sysWm     },
+                                            { icon: "󰅐",    value: "up " + dashboard.sysUptime },
+                                        ]
+                                        delegate: RowLayout {
+                                            required property var modelData
                                             Layout.fillWidth: true
-                                            spacing: 1
+                                            spacing: 8
+
+                                            Text {
+                                                text: modelData.icon
+                                                color: Config.colors.Orange
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: Config.bar.fontSize - 2
+                                            }
                                             Text {
                                                 text: modelData.label
                                                 color: Config.colors.Grey
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 7
-                                                font.letterSpacing: 1
+                                                font.pixelSize: Config.bar.fontSize - 5
                                                 font.bold: true
+                                                font.letterSpacing: 1
                                             }
+                                            Item { Layout.fillWidth: true }
                                             Text {
                                                 text: modelData.value || "…"
                                                 color: Config.colors.DarkTeal
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 3
+                                                font.pixelSize: Config.bar.fontSize - 4
                                                 font.bold: true
-                                                elide: Text.ElideRight
                                             }
                                         }
                                     }
@@ -622,6 +657,184 @@ PanelWindow {
                                                 font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize - 6 }
                                         }
                                         MouseArea { anchors.fill: parent; onClicked: dashboard.toggleNight() }
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── Now Playing mini widget ──
+                        Rectangle {
+                            id: musicCard
+                            Layout.fillWidth: true
+                            height: 160
+                            radius: 10
+                            color: Config.colors.Yellow
+                            border.width: 4
+                            border.color: Config.colors.DarkTeal
+
+                            property var player: Mpris.players.values.length > 0 ? Mpris.players.values[0] : null
+
+                            function fmtTime(us) {
+                                var s = Math.floor((us || 0) / 1000000)
+                                return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2)
+                            }
+
+                            Text {
+                                visible: !musicCard.player
+                                anchors.centerIn: parent
+                                text: "No media playing"
+                                color: Config.colors.Grey
+                                font.family: Config.bar.fontFamily
+                                font.pixelSize: Config.bar.fontSize - 4
+                            }
+
+                            ColumnLayout {
+                                visible: !!musicCard.player
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 6
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 12
+
+                                    Item {
+                                        width: 80; height: 80
+
+                                        Image {
+                                            id: miniAlbumImg
+                                            anchors.fill: parent
+                                            source: musicCard.player ? (musicCard.player.trackArtUrl || "") : ""
+                                            fillMode: Image.PreserveAspectCrop
+                                            layer.enabled: true
+                                            visible: false
+                                        }
+                                        Rectangle {
+                                            id: miniAlbumMask
+                                            anchors.fill: parent
+                                            radius: width / 2
+                                            visible: false
+                                            layer.enabled: true
+                                        }
+                                        MultiEffect {
+                                            source: miniAlbumImg
+                                            anchors.fill: miniAlbumImg
+                                            maskEnabled: true
+                                            maskSource: miniAlbumMask
+                                            maskThresholdMin: 0.5
+                                            maskSpreadAtMin: 1.0
+                                        }
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            radius: width / 2
+                                            color: Config.colors.DarkTeal
+                                            visible: !musicCard.player || !musicCard.player.trackArtUrl
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: "󰝚"
+                                                color: Config.colors.Yellow
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: 32
+                                            }
+                                        }
+                                    }
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 3
+
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: musicCard.player ? (musicCard.player.trackTitle || "—") : "—"
+                                            color: Config.colors.DarkTeal
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 4
+                                            font.bold: true
+                                            elide: Text.ElideRight
+                                        }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: musicCard.player ? (musicCard.player.trackArtist || "—") : "—"
+                                            color: Config.colors.Grey
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 6
+                                            elide: Text.ElideRight
+                                        }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: musicCard.player ? (musicCard.player.trackAlbum || "") : ""
+                                            color: Config.colors.Orange
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 8
+                                            elide: Text.ElideRight
+                                            visible: musicCard.player && musicCard.player.trackAlbum !== ""
+                                        }
+                                        AnimatedImage {
+                                            visible: !!musicCard.player
+                                            source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/assets/visualizer.gif"
+                                            playing: musicCard.player && musicCard.player.isPlaying
+                                            width: 60; height: 24
+                                            fillMode: Image.PreserveAspectFit
+                                        }
+                                    }
+                                }
+
+                                RowLayout {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    spacing: 24
+
+                                    Text {
+                                        text: "⏮"
+                                        color: musicCard.player && musicCard.player.canGoPrevious ? Config.colors.DarkTeal : Config.colors.Grey
+                                        font.family: Config.bar.fontFamily
+                                        font.pixelSize: Config.bar.fontSize
+                                        opacity: musicCard.player && musicCard.player.canGoPrevious ? 1.0 : 0.4
+                                        MouseArea { anchors.fill: parent; onClicked: if (musicCard.player && musicCard.player.canGoPrevious) musicCard.player.previous() }
+                                    }
+                                    Text {
+                                        text: musicCard.player && musicCard.player.isPlaying ? "⏸" : "⏵"
+                                        color: Config.colors.Orange
+                                        font.family: Config.bar.fontFamily
+                                        font.pixelSize: Config.bar.fontSize + 8
+                                        MouseArea { anchors.fill: parent; onClicked: if (musicCard.player) musicCard.player.togglePlaying() }
+                                    }
+                                    Text {
+                                        text: "⏭"
+                                        color: musicCard.player && musicCard.player.canGoNext ? Config.colors.DarkTeal : Config.colors.Grey
+                                        font.family: Config.bar.fontFamily
+                                        font.pixelSize: Config.bar.fontSize
+                                        opacity: musicCard.player && musicCard.player.canGoNext ? 1.0 : 0.4
+                                        MouseArea { anchors.fill: parent; onClicked: if (musicCard.player && musicCard.player.canGoNext) musicCard.player.next() }
+                                    }
+                                }
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 3
+                                    visible: musicCard.player && musicCard.player.positionSupported && musicCard.player.lengthSupported && musicCard.player.length > 0
+
+                                    Item {
+                                        Layout.fillWidth: true
+                                        height: 5
+                                        Rectangle { anchors.fill: parent; radius: 3; color: Qt.rgba(0,0,0,0.1) }
+                                        Rectangle {
+                                            width: parent.width * Math.min(1, musicCard.player && musicCard.player.length > 0
+                                                ? musicCard.player.position / musicCard.player.length : 0)
+                                            height: parent.height; radius: 3; color: Config.colors.Orange
+                                        }
+                                    }
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text {
+                                            text: musicCard.fmtTime(musicCard.player ? musicCard.player.position : 0)
+                                            color: Config.colors.Grey; font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize - 8
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                        Text {
+                                            text: musicCard.fmtTime(musicCard.player ? musicCard.player.length : 0)
+                                            color: Config.colors.Grey; font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize - 8
+                                        }
                                     }
                                 }
                             }
