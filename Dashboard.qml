@@ -22,6 +22,7 @@ PanelWindow {
     property real cpuValue: 0
     property real ramValue: 0
     property real diskValue: 0
+    property real gpuValue: 0
 
     // For clock
     property string currentTime: Qt.formatTime(new Date(), "h:mm AP")
@@ -92,6 +93,13 @@ PanelWindow {
         command: ["bash", "-c", "df / | awk 'NR==2{print $5}' | tr -d '%'"]
         stdout: StdioCollector { id: diskOut }
         onExited: dashboard.diskValue = parseFloat(diskOut.text.trim()) || 0
+    }
+
+    Process {
+        id: gpuProc
+        command: ["bash", "-c", "nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits"]
+        stdout: StdioCollector { id: gpuOut }
+        onExited: dashboard.gpuValue = parseFloat(gpuOut.text.trim()) || 0
     }
 
     Timer {
@@ -192,6 +200,19 @@ PanelWindow {
         repeat: true
         triggeredOnStart: true
         onTriggered: if (!weatherProc.running) weatherProc.running = true
+    }
+
+    Timer {
+        interval: 2000
+        running: dashboard.visible && dashboard.activeTab === 0
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: {
+            if (!cpuProc.running)  cpuProc.running  = true
+            if (!ramProc.running)  ramProc.running  = true
+            if (!diskProc.running) diskProc.running = true
+            if (!gpuProc.running)  gpuProc.running  = true
+        }
     }
 
     function greeting() {
@@ -399,6 +420,88 @@ PanelWindow {
                             }
                         }
 
+                        // ── System info ──
+                        Rectangle {
+                            Layout.preferredWidth: 340
+                            Layout.fillHeight: true
+                            radius: 10
+                            color: Config.colors.Yellow
+                            border.width: 4
+                            border.color: Config.colors.DarkTeal
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 16
+                                spacing: 16
+
+                                // Profile picture
+                                Item {
+                                    width: 100; height: 100
+
+                                    Image {
+                                        id: profileImg
+                                        anchors.fill: parent
+                                        source: "file://" + Quickshell.env("HOME") + "/Pictures/ProfilePics/momo.png"
+                                        fillMode: Image.PreserveAspectCrop
+                                        layer.enabled: true
+                                        visible: false
+                                    }
+
+                                    Rectangle {
+                                        id: circleMask
+                                        anchors.fill: parent
+                                        radius: width / 2
+                                        visible: false
+                                        layer.enabled: true
+                                    }
+
+                                    MultiEffect {
+                                        source: profileImg
+                                        anchors.fill: profileImg
+                                        maskEnabled: true
+                                        maskSource: circleMask
+                                        maskThresholdMin: 0.5
+                                        maskSpreadAtMin: 1.0
+                                    }
+                                }
+
+                                // Stats column
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 6
+
+                                    Repeater {
+                                        model: [
+                                            { icon: "󰣇", value: dashboard.sysOs     },
+                                            { icon: "󰌢", value: dashboard.sysKernel },
+                                            { icon: "󱂬", value: dashboard.sysWm     },
+                                            { icon: "󰅐", value: "up " + dashboard.sysUptime },
+                                        ]
+                                        delegate: RowLayout {
+                                            required property var modelData
+                                            Layout.fillWidth: true
+                                            spacing: 8
+
+                                            Text {
+                                                text: modelData.icon
+                                                color: Config.colors.Orange
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: Config.bar.fontSize - 2
+                                            }
+                                            Item { Layout.fillWidth: true }
+                                            Text {
+                                                text: modelData.value || "…"
+                                                color: Config.colors.DarkTeal
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: Config.bar.fontSize - 4
+                                                font.bold: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         Rectangle {
                             Layout.preferredWidth: 500
                             implicitHeight: greetingCard.implicitHeight * 2
@@ -482,9 +585,8 @@ PanelWindow {
                         Layout.fillWidth: true
                         spacing: 20
 
-                        // ── System info ──
+                        // ── Hardware stats ──
                         Rectangle {
-                            //Layout.fillWidth: true
                             width: 500
                             height: 160
                             radius: 10
@@ -492,84 +594,72 @@ PanelWindow {
                             border.width: 4
                             border.color: Config.colors.DarkTeal
 
-                            RowLayout {
+                            ColumnLayout {
                                 anchors.fill: parent
-                                anchors.margins: 16
-                                spacing: 16
+                                anchors.margins: 12
+                                spacing: 4
 
-                                // Profile picture
-                                Item {
-                                    width: 120; height: 120
-
-                                    Image {
-                                        id: profileImg
-                                        anchors.fill: parent
-                                        source: "file://" + Quickshell.env("HOME") + "/Pictures/ProfilePics/momo.png"
-                                        fillMode: Image.PreserveAspectCrop
-                                        layer.enabled: true
-                                        visible: false
-                                    }
-
-                                    Rectangle {
-                                        id: circleMask
-                                        anchors.fill: parent
-                                        radius: width / 2
-                                        visible: false
-                                        layer.enabled: true
-                                    }
-
-                                    MultiEffect {
-                                        source: profileImg
-                                        anchors.fill: profileImg
-                                        maskEnabled: true
-                                        maskSource: circleMask
-                                        maskThresholdMin: 0.5
-                                        maskSpreadAtMin: 1.0
-                                    }
+                                Text {
+                                    text: "HARDWARE"
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 8
+                                    font.bold: true
+                                    font.letterSpacing: 1.5
                                 }
 
-                                // Stats column
-                                ColumnLayout {
-                                    //Layout.fillWidth: true
-                                    spacing: 6
+                                Repeater {
+                                    model: [
+                                        { label: "CPU",  icon: "󰍛", value: dashboard.cpuValue,  color: Config.colors.Teal   },
+                                        { label: "RAM",  icon: "󰘚", value: dashboard.ramValue,  color: Config.colors.Sand   },
+                                        { label: "Disk", icon: "󰋊", value: dashboard.diskValue, color: Config.colors.Orange },
+                                        { label: "GPU",  icon: "󰾲", value: dashboard.gpuValue,  color: Config.colors.Purple },
+                                    ]
+                                    delegate: ColumnLayout {
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        spacing: 2
 
-                                    Repeater {
-                                        model: [
-                                            { icon: "󰣇",    value: dashboard.sysOs     },
-                                            { icon: "󰌢",    value: dashboard.sysKernel },
-                                            { icon: "󱂬",    value: dashboard.sysWm     },
-                                            { icon: "󰅐",    value: "up " + dashboard.sysUptime },
-                                        ]
-                                        delegate: RowLayout {
-                                            required property var modelData
+                                        RowLayout {
                                             Layout.fillWidth: true
-                                            spacing: 8
-
+                                            spacing: 6
                                             Text {
                                                 text: modelData.icon
-                                                color: Config.colors.Orange
+                                                color: modelData.color
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 2
+                                                font.pixelSize: Config.bar.fontSize - 4
                                             }
                                             Text {
                                                 text: modelData.label
-                                                color: Config.colors.Grey
+                                                color: Config.colors.DarkTeal
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 5
+                                                font.pixelSize: Config.bar.fontSize - 6
                                                 font.bold: true
-                                                font.letterSpacing: 1
                                             }
                                             Item { Layout.fillWidth: true }
                                             Text {
-                                                text: modelData.value || "…"
-                                                color: Config.colors.DarkTeal
+                                                text: Math.round(modelData.value) + "%"
+                                                color: modelData.color
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 4
+                                                font.pixelSize: Config.bar.fontSize - 6
                                                 font.bold: true
+                                            }
+                                        }
+
+                                        Item {
+                                            Layout.fillWidth: true
+                                            height: 6
+                                            Rectangle { anchors.fill: parent; radius: 3; color: Qt.rgba(0,0,0,0.1) }
+                                            Rectangle {
+                                                width: Math.max(0, parent.width * modelData.value / 100)
+                                                height: parent.height; radius: 3; color: modelData.color
+                                                Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
                                             }
                                         }
                                     }
                                 }
+
+                                Item { Layout.fillHeight: true }
                             }
                         }
 
