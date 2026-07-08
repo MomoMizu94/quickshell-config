@@ -78,28 +78,28 @@ PanelWindow {
         id: cpuProc
         command: ["bash", "-c", "top -bn1 | grep '^%Cpu' | awk '{printf \"%d\", $2+$4}'"]
         stdout: StdioCollector { id: cpuOut }
-        onExited: dashboard.cpuValue = parseFloat(cpuOut.text.trim()) || 0
+        onExited: { var v = parseFloat(cpuOut.text.trim()); if (!isNaN(v)) dashboard.cpuValue = v }
     }
 
     Process {
-        id: ramProc 
+        id: ramProc
         command: ["bash", "-c", "free -m | awk 'NR==2{printf \"%d\", $3*100/$2}'"]
         stdout: StdioCollector { id: ramOut }
-        onExited: dashboard.ramValue = parseFloat(ramOut.text.trim()) || 0
+        onExited: { var v = parseFloat(ramOut.text.trim()); if (!isNaN(v)) dashboard.ramValue = v }
     }
 
     Process {
         id: diskProc
         command: ["bash", "-c", "df / | awk 'NR==2{print $5}' | tr -d '%'"]
         stdout: StdioCollector { id: diskOut }
-        onExited: dashboard.diskValue = parseFloat(diskOut.text.trim()) || 0
+        onExited: { var v = parseFloat(diskOut.text.trim()); if (!isNaN(v)) dashboard.diskValue = v }
     }
 
     Process {
         id: gpuProc
         command: ["bash", "-c", "nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits"]
         stdout: StdioCollector { id: gpuOut }
-        onExited: dashboard.gpuValue = parseFloat(gpuOut.text.trim()) || 0
+        onExited: { var v = parseFloat(gpuOut.text.trim()); if (!isNaN(v)) dashboard.gpuValue = v }
     }
 
     Timer {
@@ -269,11 +269,9 @@ PanelWindow {
 
     Item {
         anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.topMargin: 18
-        anchors.rightMargin: 18
-        width: 1560
-        height: 680
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: 1500
+        height: 1200
 
         MouseArea { anchors.fill: parent }
 
@@ -374,7 +372,7 @@ PanelWindow {
                 ColumnLayout {
                     anchors.fill: parent
                     visible: dashboard.activeTab === 0
-                    spacing: 8
+                    spacing: 16
 
                     RowLayout {
                         Layout.fillWidth: true
@@ -387,7 +385,7 @@ PanelWindow {
                             color: Config.colors.Yellow
                             border.width: 4
                             border.color: Config.colors.DarkTeal
-                            implicitHeight: greetingLayout.implicitHeight + 24
+                            implicitHeight: quicktoggleContent.implicitHeight + 24
 
                             ColumnLayout {
                                 id: greetingLayout
@@ -407,7 +405,7 @@ PanelWindow {
                                     text: dashboard.currentTime
                                     color: Config.colors.DarkTeal
                                     font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize + 12
+                                    font.pixelSize: Config.bar.fontSize + 50
                                     font.bold: true
                                 }
 
@@ -422,21 +420,22 @@ PanelWindow {
 
                         // ── System info ──
                         Rectangle {
-                            Layout.preferredWidth: 340
-                            Layout.fillHeight: true
+                            implicitHeight: quicktoggleContent.implicitHeight + 24
+                            implicitWidth: systeminfoContent.implicitWidth + 24
                             radius: 10
                             color: Config.colors.Yellow
                             border.width: 4
                             border.color: Config.colors.DarkTeal
 
                             RowLayout {
+                                id: systeminfoContent
                                 anchors.fill: parent
-                                anchors.margins: 16
-                                spacing: 16
+                                anchors.margins: 12
+                                spacing: 200
 
                                 // Profile picture
                                 Item {
-                                    width: 100; height: 100
+                                    width: 140; height: 140
 
                                     Image {
                                         id: profileImg
@@ -501,179 +500,20 @@ PanelWindow {
                                 }
                             }
                         }
-
-                        Rectangle {
-                            Layout.preferredWidth: 500
-                            implicitHeight: greetingCard.implicitHeight * 2
-                            radius: 10
-                            color: Config.colors.Yellow
-                            border.width: 4
-                            border.color: Config.colors.DarkTeal
-                            clip: true
-
-                            ColumnLayout {
-                                anchors.fill: parent
-                                anchors.margins: 12
-                                spacing: 4
-
-                                Text {
-                                    text: "WEATHER"
-                                    color: Config.colors.Grey
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 8
-                                    font.bold: true
-                                    font.letterSpacing: 1.5
-                                }
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    Text {
-                                        text: dashboard.weatherTemp + "°"
-                                        color: Config.colors.DarkTeal
-                                        font.family: Config.bar.fontFamily
-                                        font.pixelSize: Config.bar.fontSize + 50
-                                        font.bold: true
-                                    }
-                                    Item { Layout.fillWidth: true }
-                                    Text {
-                                        text: dashboard.weatherIcon(dashboard.weatherDesc)
-                                        font.family: Config.bar.fontFamily
-                                        font.pixelSize: Config.bar.fontSize + 80
-                                    }
-                                }
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    visible: dashboard.weatherLocation !== ""
-                                    text: dashboard.weatherLocation
-                                    color: Config.colors.Grey
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 5
-                                    elide: Text.ElideRight
-                                }
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: dashboard.weatherDesc !== "" ? dashboard.weatherDesc : "Loading…"
-                                    color: Config.colors.Grey
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 5
-                                    elide: Text.ElideRight
-                                }
-
-                                Text {
-                                    text: "H: " + dashboard.weatherHigh + "°  L: " + dashboard.weatherLow
-                                        + "°  ·  " + dashboard.weatherHumidity + "% humidity"
-                                    color: Config.colors.Grey
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 5
-                                }
-
-                                Text {
-                                    text: "Wind: " + dashboard.weatherWindSpeed + " m/s " + dashboard.weatherWindDir
-                                    color: Config.colors.Grey
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 5
-                                }
-
-                                Item { Layout.fillHeight: true }
-                            }
-                        }
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 20
-
-                        // ── Hardware stats ──
-                        Rectangle {
-                            width: 500
-                            height: 160
-                            radius: 10
-                            color: Config.colors.Yellow
-                            border.width: 4
-                            border.color: Config.colors.DarkTeal
-
-                            ColumnLayout {
-                                anchors.fill: parent
-                                anchors.margins: 12
-                                spacing: 4
-
-                                Text {
-                                    text: "HARDWARE"
-                                    color: Config.colors.Grey
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 8
-                                    font.bold: true
-                                    font.letterSpacing: 1.5
-                                }
-
-                                Repeater {
-                                    model: [
-                                        { label: "CPU",  icon: "󰍛", value: dashboard.cpuValue,  color: Config.colors.Teal   },
-                                        { label: "RAM",  icon: "󰘚", value: dashboard.ramValue,  color: Config.colors.Sand   },
-                                        { label: "Disk", icon: "󰋊", value: dashboard.diskValue, color: Config.colors.Orange },
-                                        { label: "GPU",  icon: "󰾲", value: dashboard.gpuValue,  color: Config.colors.Purple },
-                                    ]
-                                    delegate: ColumnLayout {
-                                        required property var modelData
-                                        Layout.fillWidth: true
-                                        spacing: 2
-
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: 6
-                                            Text {
-                                                text: modelData.icon
-                                                color: modelData.color
-                                                font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 4
-                                            }
-                                            Text {
-                                                text: modelData.label
-                                                color: Config.colors.DarkTeal
-                                                font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 6
-                                                font.bold: true
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                            Text {
-                                                text: Math.round(modelData.value) + "%"
-                                                color: modelData.color
-                                                font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 6
-                                                font.bold: true
-                                            }
-                                        }
-
-                                        Item {
-                                            Layout.fillWidth: true
-                                            height: 6
-                                            Rectangle { anchors.fill: parent; radius: 3; color: Qt.rgba(0,0,0,0.1) }
-                                            Rectangle {
-                                                width: Math.max(0, parent.width * modelData.value / 100)
-                                                height: parent.height; radius: 3; color: modelData.color
-                                                Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                Item { Layout.fillHeight: true }
-                            }
-                        }
-
                         // ── Quick toggles ──
                         Rectangle {
-                            Layout.preferredWidth: 320
-                            height: 140
+                            Layout.fillWidth: true
+                            implicitHeight: quicktoggleContent.implicitHeight + 24
                             radius: 10
                             color: Config.colors.Yellow
                             border.width: 4
                             border.color: Config.colors.DarkTeal
 
                             ColumnLayout {
-                                anchors.fill: parent
+                                id: quicktoggleContent
+                                anchors.top: parent.top
+                                anchors.left: parent.left
+                                anchors.right: parent.right
                                 anchors.margins: 12
                                 spacing: 6
 
@@ -688,13 +528,12 @@ PanelWindow {
 
                                 GridLayout {
                                     Layout.fillWidth: true
-                                    Layout.fillHeight: true
                                     columns: 2
                                     rowSpacing: 6
                                     columnSpacing: 6
 
                                     Rectangle {
-                                        Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredHeight: 68; radius: 8
                                         color: dashboard.wifiEnabled ? Qt.rgba(0.82, 0.53, 0.44, 0.3) : Qt.rgba(0,0,0,0.05)
                                         ColumnLayout { anchors.centerIn: parent; spacing: 2
                                             Text { Layout.alignment: Qt.AlignHCenter; text: "󰤨"
@@ -708,7 +547,7 @@ PanelWindow {
                                     }
 
                                     Rectangle {
-                                        Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredHeight: 68; radius: 8
                                         color: dashboard.bluetoothEnabled ? Qt.rgba(0.82, 0.53, 0.44, 0.3) : Qt.rgba(0,0,0,0.05)
                                         ColumnLayout { anchors.centerIn: parent; spacing: 2
                                             Text { Layout.alignment: Qt.AlignHCenter; text: "󰂯"
@@ -722,7 +561,7 @@ PanelWindow {
                                     }
 
                                     Rectangle {
-                                        Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredHeight: 68; radius: 8
                                         color: dashboard.dndEnabled ? Qt.rgba(0.82, 0.53, 0.44, 0.3) : Qt.rgba(0,0,0,0.05)
                                         ColumnLayout { anchors.centerIn: parent; spacing: 2
                                             Text { Layout.alignment: Qt.AlignHCenter; text: "󰍷"
@@ -736,7 +575,7 @@ PanelWindow {
                                     }
 
                                     Rectangle {
-                                        Layout.fillWidth: true; Layout.fillHeight: true; radius: 8
+                                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredHeight: 68; radius: 8
                                         color: dashboard.nightEnabled ? Qt.rgba(0.82, 0.53, 0.44, 0.3) : Qt.rgba(0,0,0,0.05)
                                         ColumnLayout { anchors.centerIn: parent; spacing: 2
                                             Text { Layout.alignment: Qt.AlignHCenter; text: "󰌵"
@@ -751,12 +590,18 @@ PanelWindow {
                                 }
                             }
                         }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 20
 
                         // ── Now Playing mini widget ──
                         Rectangle {
                             id: musicCard
-                            Layout.fillWidth: true
-                            height: 160
+                            //Layout.fillWidth: true
+                            Layout.preferredWidth: 400
+                            implicitHeight: musicContent.implicitHeight + 32
                             radius: 10
                             color: Config.colors.Yellow
                             border.width: 4
@@ -769,6 +614,13 @@ PanelWindow {
                                 return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2)
                             }
 
+                            Timer {
+                                interval: 1000
+                                running: !!musicCard.player && musicCard.player.isPlaying
+                                repeat: true
+                                onTriggered: progressRing.requestPaint()
+                            }
+
                             Text {
                                 visible: !musicCard.player
                                 anchors.centerIn: parent
@@ -779,17 +631,55 @@ PanelWindow {
                             }
 
                             ColumnLayout {
+                                id: musicContent
                                 visible: !!musicCard.player
-                                anchors.fill: parent
-                                anchors.margins: 12
-                                spacing: 6
+                                anchors.top: parent.top
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.margins: 16
+                                spacing: 8
 
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 12
+                                // ── Album art with circular progress ring ──
+                                Item {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    width: 250; height: 250
+
+                                    Canvas {
+                                        id: progressRing
+                                        anchors.fill: parent
+                                        onPaint: {
+                                            var ctx = getContext("2d")
+                                            ctx.clearRect(0, 0, width, height)
+                                            var cx = width / 2, cy = height / 2
+                                            var r = cx - 6
+                                            var lw = 8
+
+                                            // Read position directly — bypasses QML property cache
+                                            var progress = 0
+                                            var p = musicCard.player
+                                            if (p && p.lengthSupported && p.length > 0)
+                                                progress = Math.min(1, p.position / p.length)
+
+                                            ctx.beginPath()
+                                            ctx.arc(cx, cy, r, 0, Math.PI * 2)
+                                            ctx.strokeStyle = "rgba(0,0,0,0.12)"
+                                            ctx.lineWidth = lw
+                                            ctx.lineCap = "round"
+                                            ctx.stroke()
+                                            if (progress > 0) {
+                                                ctx.beginPath()
+                                                ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2)
+                                                ctx.strokeStyle = "#D18870"
+                                                ctx.lineWidth = lw
+                                                ctx.lineCap = "round"
+                                                ctx.stroke()
+                                            }
+                                        }
+                                    }
 
                                     Item {
-                                        width: 80; height: 80
+                                        width: 220; height: 220
+                                        anchors.centerIn: parent
 
                                         Image {
                                             id: miniAlbumImg
@@ -824,109 +714,248 @@ PanelWindow {
                                                 text: "󰝚"
                                                 color: Config.colors.Yellow
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: 32
+                                                font.pixelSize: 48
                                             }
-                                        }
-                                    }
-
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 3
-
-                                        Text {
-                                            Layout.fillWidth: true
-                                            text: musicCard.player ? (musicCard.player.trackTitle || "—") : "—"
-                                            color: Config.colors.DarkTeal
-                                            font.family: Config.bar.fontFamily
-                                            font.pixelSize: Config.bar.fontSize - 4
-                                            font.bold: true
-                                            elide: Text.ElideRight
-                                        }
-                                        Text {
-                                            Layout.fillWidth: true
-                                            text: musicCard.player ? (musicCard.player.trackArtist || "—") : "—"
-                                            color: Config.colors.Grey
-                                            font.family: Config.bar.fontFamily
-                                            font.pixelSize: Config.bar.fontSize - 6
-                                            elide: Text.ElideRight
-                                        }
-                                        Text {
-                                            Layout.fillWidth: true
-                                            text: musicCard.player ? (musicCard.player.trackAlbum || "") : ""
-                                            color: Config.colors.Orange
-                                            font.family: Config.bar.fontFamily
-                                            font.pixelSize: Config.bar.fontSize - 8
-                                            elide: Text.ElideRight
-                                            visible: musicCard.player && musicCard.player.trackAlbum !== ""
-                                        }
-                                        AnimatedImage {
-                                            visible: !!musicCard.player
-                                            source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/assets/visualizer.gif"
-                                            playing: musicCard.player && musicCard.player.isPlaying
-                                            width: 60; height: 24
-                                            fillMode: Image.PreserveAspectFit
                                         }
                                     }
                                 }
 
+                                // ── Track info ──
+                                Text {
+                                    Layout.fillWidth: true
+                                    horizontalAlignment: Text.AlignHCenter
+                                    text: musicCard.player ? (musicCard.player.trackTitle || "—") : "—"
+                                    color: Config.colors.DarkTeal
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 2
+                                    font.bold: true
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    horizontalAlignment: Text.AlignHCenter
+                                    text: musicCard.player ? (musicCard.player.trackArtist || "—") : "—"
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 6
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    horizontalAlignment: Text.AlignHCenter
+                                    text: musicCard.player ? (musicCard.player.trackAlbum || "") : ""
+                                    color: Config.colors.Orange
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 8
+                                    elide: Text.ElideRight
+                                    visible: musicCard.player && musicCard.player.trackAlbum !== ""
+                                }
+
+                                // ── Playback controls ──
                                 RowLayout {
                                     Layout.alignment: Qt.AlignHCenter
-                                    spacing: 24
+                                    spacing: 28
 
                                     Text {
-                                        text: "⏮"
+                                        text: ""
                                         color: musicCard.player && musicCard.player.canGoPrevious ? Config.colors.DarkTeal : Config.colors.Grey
                                         font.family: Config.bar.fontFamily
-                                        font.pixelSize: Config.bar.fontSize
+                                        font.pixelSize: Config.bar.fontSize + 2
                                         opacity: musicCard.player && musicCard.player.canGoPrevious ? 1.0 : 0.4
                                         MouseArea { anchors.fill: parent; onClicked: if (musicCard.player && musicCard.player.canGoPrevious) musicCard.player.previous() }
                                     }
                                     Text {
-                                        text: musicCard.player && musicCard.player.isPlaying ? "⏸" : "⏵"
+                                        text: musicCard.player && musicCard.player.isPlaying ? "" : ""
                                         color: Config.colors.Orange
                                         font.family: Config.bar.fontFamily
-                                        font.pixelSize: Config.bar.fontSize + 8
+                                        font.pixelSize: Config.bar.fontSize + 12
                                         MouseArea { anchors.fill: parent; onClicked: if (musicCard.player) musicCard.player.togglePlaying() }
                                     }
                                     Text {
-                                        text: "⏭"
+                                        text: ""
                                         color: musicCard.player && musicCard.player.canGoNext ? Config.colors.DarkTeal : Config.colors.Grey
                                         font.family: Config.bar.fontFamily
-                                        font.pixelSize: Config.bar.fontSize
+                                        font.pixelSize: Config.bar.fontSize + 2
                                         opacity: musicCard.player && musicCard.player.canGoNext ? 1.0 : 0.4
                                         MouseArea { anchors.fill: parent; onClicked: if (musicCard.player && musicCard.player.canGoNext) musicCard.player.next() }
                                     }
                                 }
 
-                                ColumnLayout {
+                                // ── GIF visualizer ──
+                                AnimatedImage {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/assets/bongocat.gif"
+                                    playing: musicCard.player && musicCard.player.isPlaying
+                                    width: 80; height: 32
+                                    fillMode: Image.PreserveAspectFit
+                                }
+                            }
+                        }
+
+                        // ── Hardware stats ──
+                        Rectangle {
+                            implicitHeight: musicContent.implicitHeight + 32
+                            //Layout.fillWidth: true
+                            Layout.preferredWidth: 400
+                            radius: 10
+                            color: Config.colors.Yellow
+                            border.width: 4
+                            border.color: Config.colors.DarkTeal
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 20
+                                spacing: 20
+
+                                Text {
+                                    text: "HARDWARE"
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 8
+                                    font.bold: true
+                                    font.letterSpacing: 1.5
+                                }
+
+                                RowLayout {
                                     Layout.fillWidth: true
-                                    spacing: 3
-                                    visible: musicCard.player && musicCard.player.positionSupported && musicCard.player.lengthSupported && musicCard.player.length > 0
+                                    Layout.fillHeight: true
+                                    spacing: 20
 
-                                    Item {
-                                        Layout.fillWidth: true
-                                        height: 5
-                                        Rectangle { anchors.fill: parent; radius: 3; color: Qt.rgba(0,0,0,0.1) }
-                                        Rectangle {
-                                            width: parent.width * Math.min(1, musicCard.player && musicCard.player.length > 0
-                                                ? musicCard.player.position / musicCard.player.length : 0)
-                                            height: parent.height; radius: 3; color: Config.colors.Orange
-                                        }
-                                    }
+                                    Repeater {
+                                        // Static data only — no live values in the model so delegates are never recreated
+                                        model: [
+                                            { icon: "󰍛", color: Config.colors.Teal   },
+                                            { icon: "󰾲", color: Config.colors.Purple },
+                                            { icon: "󰘚", color: Config.colors.Black   },
+                                            { icon: "󰋊", color: Config.colors.Orange },
+                                        ]
+                                        delegate: ColumnLayout {
+                                            required property var modelData
+                                            required property int index
+                                            Layout.fillWidth: true
+                                            Layout.fillHeight: true
+                                            spacing: 20
 
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text {
-                                            text: musicCard.fmtTime(musicCard.player ? musicCard.player.position : 0)
-                                            color: Config.colors.Grey; font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize - 8
-                                        }
-                                        Item { Layout.fillWidth: true }
-                                        Text {
-                                            text: musicCard.fmtTime(musicCard.player ? musicCard.player.length : 0)
-                                            color: Config.colors.Grey; font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize - 8
+                                            // Read live value directly from dashboard by index
+                                            property real value: index === 0 ? dashboard.cpuValue
+                                                               : index === 1 ? dashboard.gpuValue
+                                                               : index === 2 ? dashboard.ramValue
+                                                               : dashboard.diskValue
+
+                                            Item {
+                                                Layout.fillWidth: true
+                                                Layout.fillHeight: true
+
+                                                Rectangle { anchors.fill: parent; radius: 4; color: Qt.rgba(0,0,0,0.1) }
+                                                Rectangle {
+                                                    anchors.bottom: parent.bottom
+                                                    anchors.left: parent.left
+                                                    anchors.right: parent.right
+                                                    height: Math.max(0, parent.height * parent.parent.value / 100)
+                                                    radius: 4
+                                                    color: modelData.color
+                                                    Behavior on height { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+                                                }
+                                            }
+
+                                            Text {
+                                                Layout.alignment: Qt.AlignHCenter
+                                                text: modelData.icon
+                                                color: modelData.color
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: Config.bar.fontSize + 16
+                                            }
                                         }
                                     }
                                 }
+                            }
+                        }
+
+                        // Weather stats
+                        Rectangle {
+                            implicitHeight: musicCard.implicitHeight
+                            //implicitWidth: weatherContent.implicitWidth + 24
+                            Layout.fillWidth: true
+                            radius: 10
+                            color: Config.colors.Yellow
+                            border.width: 4
+                            border.color: Config.colors.DarkTeal
+                            clip: true
+
+                            ColumnLayout {
+                                id: weatherContent
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 6
+                                Text {
+                                    text: "WEATHER"
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 8
+                                    font.bold: true
+                                    font.letterSpacing: 1.5
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Layout.bottomMargin: 36
+                                    Text {
+                                        text: dashboard.weatherTemp + "°"
+                                        color: Config.colors.DarkTeal
+                                        font.family: Config.bar.fontFamily
+                                        font.pixelSize: Config.bar.fontSize + 50
+                                        font.bold: true
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                    Text {
+                                        text: dashboard.weatherIcon(dashboard.weatherDesc)
+                                        font.family: Config.bar.fontFamily
+                                        font.pixelSize: Config.bar.fontSize + 50
+                                    }
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    visible: dashboard.weatherLocation !== ""
+                                    text: dashboard.weatherLocation
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 5
+                                    elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: dashboard.weatherDesc !== "" ? dashboard.weatherDesc : "Loading…"
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 5
+                                    elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    text: "H: " + dashboard.weatherHigh + "°  L: " + dashboard.weatherLow
+                                        + "°"
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 5
+                                }
+
+                                Text {
+                                    text: dashboard.weatherHumidity + "% humidity"
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 5
+                                }
+
+                                Text {
+                                    text: "Wind: " + dashboard.weatherWindSpeed + " m/s " + dashboard.weatherWindDir
+                                    color: Config.colors.Grey
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 5
+                                }
+
+                                Item { Layout.fillHeight: true }
                             }
                         }
                     }

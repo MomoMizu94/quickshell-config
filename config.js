@@ -14,6 +14,12 @@ const colors = {
 	Grey:			'#4B556A',
 	Blue:			'#5E82AD',
 	Green:			'#A4BF8D',
+
+	// Dark theme
+	card:           '#252B36',
+	panel:          '#1A1F2B',
+	text:           '#DDE3EA',
+	subtext:        '#6B7A94',
 }
 
 
