@@ -1243,11 +1243,12 @@ PanelWindow {
 
                     RowLayout {
                         Layout.fillWidth: true
+                        Layout.bottomMargin: 20
                         Text {
                             text: "‹"
                             color: Config.colors.subtext
                             font.family: Config.bar.fontFamily
-                            font.pixelSize: Config.bar.fontSize + 8
+                            font.pixelSize: Config.bar.fontSize + 20
                             font.bold: true
                             MouseArea {
                                 anchors.fill: parent
@@ -1262,7 +1263,7 @@ PanelWindow {
                             text: dashboard.monthNames[dashboard.calMonth - 1] + "  " + dashboard.calYear
                             color: Config.colors.text
                             font.family: Config.bar.fontFamily
-                            font.pixelSize: Config.bar.fontSize + 4
+                            font.pixelSize: Config.bar.fontSize + 20
                             font.bold: true
                             horizontalAlignment: Text.AlignHCenter
                         }
@@ -1270,7 +1271,7 @@ PanelWindow {
                             text: "›"
                             color: Config.colors.subtext
                             font.family: Config.bar.fontFamily
-                            font.pixelSize: Config.bar.fontSize + 8
+                            font.pixelSize: Config.bar.fontSize + 10
                             font.bold: true
                             MouseArea {
                                 anchors.fill: parent
@@ -1291,10 +1292,10 @@ PanelWindow {
 
                         Text {
                             Layout.fillWidth: true
-                            text: "Wk"
+                            text: "Week"
                             color: Config.colors.Orange
                             font.family: Config.bar.fontFamily
-                            font.pixelSize: Config.bar.fontSize - 8
+                            font.pixelSize: Config.bar.fontSize + 4
                             font.bold: true
                             horizontalAlignment: Text.AlignHCenter
                         }
@@ -1305,7 +1306,7 @@ PanelWindow {
                                 text: modelData
                                 color: Config.colors.subtext
                                 font.family: Config.bar.fontFamily
-                                font.pixelSize: Config.bar.fontSize - 4
+                                font.pixelSize: Config.bar.fontSize + 10
                                 font.bold: true
                                 horizontalAlignment: Text.AlignHCenter
                             }
@@ -1316,8 +1317,9 @@ PanelWindow {
                     GridLayout {
                         Layout.fillWidth: true
                         columns: 8
-                        columnSpacing: 0
-                        rowSpacing: 0
+                        columnSpacing: 25
+                        rowSpacing: 25
+                        Layout.bottomMargin: 100
                         Repeater {
                             model: dashboard.calendarDays()
                             delegate: Item {
@@ -1339,7 +1341,7 @@ PanelWindow {
                                     text: isWeek ? modelData.num : ""
                                     color: Config.colors.Orange
                                     font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 6
+                                    font.pixelSize: Config.bar.fontSize + 4
                                     font.bold: true
                                     opacity: 0.7
                                 }
@@ -1348,7 +1350,7 @@ PanelWindow {
                                 Rectangle {
                                     visible: !isWeek
                                     anchors.centerIn: parent
-                                    width: 42; height: 42; radius: 21
+                                    width: 60; height: 60; radius: 20
                                     color: isToday ? Config.colors.Orange : "transparent"
                                 }
 
@@ -1363,7 +1365,7 @@ PanelWindow {
                                             ? Config.colors.text
                                             : Config.colors.subtext
                                     font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize
+                                    font.pixelSize: Config.bar.fontSize + 10
                                     font.bold: isToday
                                 }
                             }
