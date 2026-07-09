@@ -24,6 +24,20 @@ PanelWindow {
     property real diskValue: 0
     property real gpuValue: 0
 
+    // Performance tab details
+    property real cpuFreqGhz: 0
+    property real cpuTemp: 0
+    property real gpuTemp: 0
+    property string gpuName: ""
+    property var coreLoads: []
+    property real ramUsedGb: 0
+    property real ramTotalGb: 0
+    property real netUpMbs: 0
+    property real netDownMbs: 0
+    property real diskUsedGb: 0
+    property real diskTotalGb: 0
+    property int processCount: 0
+
     // For clock
     property string currentTime: Qt.formatTime(new Date(), "h:mm AP")
     property string currentDate: Qt.formatDate(new Date(), "dddd, d MMMM yyyy")
@@ -126,6 +140,32 @@ PanelWindow {
         onExited: { var v = parseFloat(gpuOut.text.trim()); if (!isNaN(v)) dashboard.gpuValue = v }
     }
 
+    Process {
+        id: perfProc
+        command: ["bash", Quickshell.env("HOME") + "/.config/quickshell/scripts/perf.sh"]
+        stdout: StdioCollector { id: perfOut }
+        onExited: {
+            try {
+                const d = JSON.parse(perfOut.text)
+                dashboard.cpuValue = d.cpu
+                dashboard.coreLoads = d.cores
+                dashboard.cpuFreqGhz = d.freq
+                dashboard.cpuTemp = d.ctemp
+                dashboard.gpuValue = d.gpu
+                dashboard.gpuTemp = d.gtemp
+                dashboard.gpuName = d.gname
+                dashboard.ramValue = d.ramT > 0 ? 100 * d.ramU / d.ramT : 0
+                dashboard.ramUsedGb = d.ramU
+                dashboard.ramTotalGb = d.ramT
+                dashboard.netUpMbs = d.up
+                dashboard.netDownMbs = d.down
+                dashboard.diskUsedGb = d.diskU
+                dashboard.diskTotalGb = d.diskT
+                dashboard.processCount = d.procs
+            } catch (e) {}
+        }
+    }
+
     Timer {
         interval: Config.timer.interval
         running: dashboard.visible
@@ -139,10 +179,7 @@ PanelWindow {
 
             // Only update stats when on correct tab
             if (dashboard.activeTab === 3) {
-                if (!cpuProc.running) cpuProc.running = true
-                if (!ramProc.running) ramProc.running = true
-                if (!diskProc.running) diskProc.running = true
-                if (!uptimeProc.running) uptimeProc.running = true
+                if (!perfProc.running) perfProc.running = true
             }
         }
     }
@@ -1726,73 +1763,256 @@ PanelWindow {
                     }
                 }
 
-                // ── Tab 3: Stats ──
+                // ── Tab 3: Performance ──
                 ColumnLayout {
                     anchors.fill: parent
                     visible: dashboard.activeTab === 3
-                    spacing: 24
+                    spacing: 14
 
-                    Item { Layout.preferredHeight: 10 }
+                    // ── Top: CPU / RAM / GPU donut gauges ──
+                    RowLayout {
+                        Layout.fillWidth: true
+                        //Layout.preferredHeight: Math.round(contentArea.height * 0.48)
+                        spacing: 14
 
-                    Repeater {
-                        model: [
-                            { label: "CPU",    icon: "󰍛", value: dashboard.cpuValue,  color: Config.colors.Teal },
-                            { label: "RAM",    icon: "󰘚", value: dashboard.ramValue,  color: Config.colors.Sand     },
-                            { label: "Disk /", icon: "󰋊", value: dashboard.diskValue, color: Config.colors.Orange   }
-                        ]
-                        delegate: ColumnLayout {
-                            required property var modelData
-                            Layout.fillWidth: true
-                            spacing: 8
+                        Repeater {
+                            model: [
+                                { label: "CPU", icon: "󰍛" },
+                                { label: "RAM", icon: "󰘚" },
+                                { label: "GPU", icon: "󰢮" }
+                            ]
+                            delegate: Rectangle {
+                                id: gaugeCard
+                                required property var modelData
+                                required property int index
+                                property real value: index === 0 ? dashboard.cpuValue
+                                                   : index === 1 ? dashboard.ramValue
+                                                   : dashboard.gpuValue
+                                property string subline: index === 0
+                                        ? dashboard.cpuFreqGhz.toFixed(1) + "GHz · " + Math.round(dashboard.cpuTemp) + "°C"
+                                    : index === 1
+                                        ? dashboard.ramUsedGb.toFixed(1) + " / " + Math.round(dashboard.ramTotalGb) + " GB"
+                                        : Math.round(dashboard.gpuTemp) + "°C · " + dashboard.gpuName
 
-                            RowLayout {
                                 Layout.fillWidth: true
-                                spacing: 8
-                                Text {
-                                    text: modelData.icon
-                                    color: modelData.color
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize
-                                }
-                                Text {
-                                    text: modelData.label
-                                    color: Config.colors.CreamyWhite
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 2
-                                    font.bold: true
-                                }
-                                Item { Layout.fillWidth: true }
-                                Text {
-                                    text: Math.round(modelData.value) + "%"
-                                    color: modelData.color
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 2
-                                    font.bold: true
-                                }
-                            }
+                                Layout.fillHeight: true
+                                radius: 10
+                                color: Config.colors.card
 
-                            Item {
-                                Layout.fillWidth: true
-                                height: 10
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: 5
-                                    color: Config.colors.panel
-                                }
-                                Rectangle {
-                                    width: Math.max(0, parent.width * modelData.value / 100)
-                                    height: parent.height
-                                    radius: 5
-                                    color: modelData.color
-                                    Behavior on width {
-                                        NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+                                ColumnLayout {
+                                    anchors.centerIn: parent
+                                    spacing: 10
+
+                                    Item {
+                                        id: gauge
+                                        property real size: Math.min(gaugeCard.width, gaugeCard.height) * 0.55
+                                        Layout.alignment: Qt.AlignHCenter
+                                        Layout.preferredWidth: size
+                                        Layout.preferredHeight: size
+
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: gauge.size * 0.78; height: width
+                                            radius: width / 2
+                                            color: Config.colors.panel
+                                        }
+
+                                        Canvas {
+                                            anchors.fill: parent
+                                            property real value: gaugeCard.value
+                                            onValueChanged: requestPaint()
+                                            onWidthChanged: requestPaint()
+                                            onPaint: {
+                                                var ctx = getContext("2d")
+                                                ctx.clearRect(0, 0, width, height)
+                                                var cx = width / 2, cy = height / 2
+                                                var lw = gauge.size * 0.11
+                                                var r = (gauge.size - lw) / 2
+                                                ctx.lineWidth = lw
+                                                ctx.lineCap = "round"
+                                                ctx.strokeStyle = Config.colors.Grey
+                                                ctx.globalAlpha = 0.35
+                                                ctx.beginPath()
+                                                ctx.arc(cx, cy, r, 0, Math.PI * 2)
+                                                ctx.stroke()
+                                                ctx.globalAlpha = 1.0
+                                                ctx.strokeStyle = Config.colors.Orange
+                                                ctx.beginPath()
+                                                ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, value / 100))
+                                                ctx.stroke()
+                                            }
+                                        }
+
+                                        Column {
+                                            anchors.centerIn: parent
+                                            spacing: -2
+
+                                            Text {
+                                                anchors.horizontalCenter: parent.horizontalCenter
+                                                text: Math.round(gaugeCard.value)
+                                                color: Config.colors.CreamyWhite
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: gauge.size * 0.28
+                                                font.bold: true
+                                            }
+                                            Text {
+                                                anchors.horizontalCenter: parent.horizontalCenter
+                                                text: "%"
+                                                color: Config.colors.subtext
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: gauge.size * 0.11
+                                            }
+                                        }
+                                    }
+
+                                    RowLayout {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        spacing: 8
+                                        Text {
+                                            text: gaugeCard.modelData.icon
+                                            color: Config.colors.Orange
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 2
+                                        }
+                                        Text {
+                                            text: gaugeCard.modelData.label
+                                            color: Config.colors.Orange
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 2
+                                            font.bold: true
+                                            font.letterSpacing: 1.5
+                                        }
+                                    }
+
+                                    Text {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        text: gaugeCard.subline
+                                        color: Config.colors.subtext
+                                        font.family: Config.bar.fontFamily
+                                        font.pixelSize: Config.bar.fontSize - 6
                                     }
                                 }
                             }
                         }
                     }
 
-                    Item { Layout.fillHeight: true }
+                    // ── Bottom: per-core bars + network/disk/process info ──
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        spacing: 14
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            radius: 10
+                            color: Config.colors.card
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 16
+                                spacing: 12
+
+                                Text {
+                                    text: "CPU CORES"
+                                    color: Config.colors.subtext
+                                    font.family: Config.bar.fontFamily
+                                    font.pixelSize: Config.bar.fontSize - 6
+                                    font.bold: true
+                                    font.letterSpacing: 1.5
+                                }
+
+                                Item {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        spacing: 6
+
+                                        Repeater {
+                                            model: dashboard.coreLoads.length
+                                            delegate: Item {
+                                                required property int index
+                                                property real load: dashboard.coreLoads[index] || 0
+                                                Layout.fillWidth: true
+                                                Layout.fillHeight: true
+
+                                                Rectangle {
+                                                    anchors.bottom: parent.bottom
+                                                    width: parent.width
+                                                    height: Math.max(4, parent.height * parent.load / 100)
+                                                    radius: 4
+                                                    color: parent.load > 66 ? Config.colors.Red
+                                                         : parent.load > 33 ? Config.colors.Orange
+                                                         : Config.colors.Sand
+                                                    Behavior on height {
+                                                        NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Rectangle {
+                            Layout.preferredWidth: Math.round(contentArea.width * 0.26)
+                            Layout.fillHeight: true
+                            radius: 10
+                            color: Config.colors.card
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 16
+                                spacing: 0
+
+                                Repeater {
+                                    model: [
+                                        { icon: "󰕒", label: "upload" },
+                                        { icon: "󰇚", label: "download" },
+                                        { icon: "󰋊", label: "disk /" },
+                                        { icon: "󰅴", label: "processes" }
+                                    ]
+                                    delegate: RowLayout {
+                                        id: infoRow
+                                        required property var modelData
+                                        required property int index
+                                        property string value: index === 0 ? dashboard.netUpMbs.toFixed(1) + " MB/s"
+                                                             : index === 1 ? dashboard.netDownMbs.toFixed(1) + " MB/s"
+                                                             : index === 2 ? Math.round(dashboard.diskUsedGb) + " / " + Math.round(dashboard.diskTotalGb) + " GB"
+                                                             : "" + dashboard.processCount
+
+                                        Layout.fillWidth: true
+                                        Layout.fillHeight: true
+                                        spacing: 10
+
+                                        Text {
+                                            text: infoRow.modelData.icon
+                                            color: Config.colors.Orange
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 4
+                                        }
+                                        Text {
+                                            text: infoRow.modelData.label
+                                            color: Config.colors.subtext
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 4
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                        Text {
+                                            text: infoRow.value
+                                            color: Config.colors.CreamyWhite
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 4
+                                            font.bold: true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
