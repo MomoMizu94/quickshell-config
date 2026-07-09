@@ -127,7 +127,7 @@ PanelWindow {
     }
 
     Timer {
-        interval: Config.interval
+        interval: Config.timer.interval
         running: dashboard.visible
         repeat: true
         triggeredOnStart: true
@@ -321,10 +321,10 @@ PanelWindow {
 
                 Repeater {
                     model: [
-                        { icon: "󰕮", label: "Dashboard"   },
-                        { icon: "󰃭", label: "Calendar" },
-                        { icon: "󰝚", label: "Media"    },
-                        { icon: "󰈸", label: "Stats"    }
+                        { icon: "󰕮", label: "Dashboard"     },
+                        { icon: "󰃭", label: "Calendar"      },
+                        { icon: "󰝚", label: "Media"         },
+                        { icon: "󰓅", label: "Performance"   }
                         // Workspaces??
                     ]
                     delegate: Item {
@@ -402,7 +402,7 @@ PanelWindow {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 8
+                        spacing: 20
 
                         Rectangle {
                             id: greetingCard
@@ -635,8 +635,8 @@ PanelWindow {
 
                             property var player: Mpris.players.values.length > 0 ? Mpris.players.values[0] : null
 
-                            function fmtTime(us) {
-                                var s = Math.floor((us || 0) / 1000000)
+                            function fmtTime(secs) {
+                                var s = Math.floor(secs || 0)
                                 return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2)
                             }
 
@@ -1002,7 +1002,7 @@ PanelWindow {
                         Text {
                             Layout.fillWidth: true
                             text: "Notifications"
-                            color: Config.colors.Turqoise
+                            color: Config.colors.DarkTeal
                             font.family: Config.bar.fontFamily
                             font.pixelSize: Config.bar.fontSize
                             font.bold: true
@@ -1026,7 +1026,7 @@ PanelWindow {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         text: "No notifications"
-                        color: Config.colors.Cyan
+                        color: Config.colors.Teal
                         font.family: Config.bar.fontFamily
                         font.pixelSize: Config.bar.fontSize - 2
                         horizontalAlignment: Text.AlignHCenter
@@ -1457,135 +1457,214 @@ PanelWindow {
                     spacing: 12
 
                     Text {
-                        visible: Mpris.players.count === 0
+                        visible: Mpris.players.values.length === 0
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         text: "No media playing"
-                        color: Config.colors.Cyan
+                        color: Config.colors.DarkTeal
                         font.family: Config.bar.fontFamily
                         font.pixelSize: Config.bar.fontSize - 2
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
 
-                    Flickable {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        visible: Mpris.players.count > 0
-                        contentHeight: mediaCol.implicitHeight
-                        clip: true
+                    Repeater {
+                        model: Mpris.players.values
+                        delegate: Rectangle {
+                            id: mediaCard
+                            required property var modelData
+                            required property int index
+                            property var player: modelData
 
-                        ColumnLayout {
-                            id: mediaCol
-                            width: parent.width
-                            spacing: 16
+                            property real mediaProgress: 0
+                            property string mediaCurrentTime: "0:00"
 
-                            Repeater {
-                                model: Mpris.players
-                                delegate: ColumnLayout {
-                                    required property var modelData
-                                    property int playerIdx: index
-                                    Layout.fillWidth: true
-                                    spacing: 12 
+                            function fmtTime(secs) {
+                                var s = Math.floor(secs || 0)
+                                return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2)
+                            }
 
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 14
+                            Timer {
+                                interval: 1000
+                                running: mediaCard.player && mediaCard.player.isPlaying
+                                repeat: true
+                                triggeredOnStart: true
+                                onTriggered: {
+                                    var p = mediaCard.player
+                                    if (p && p.lengthSupported && p.length > 0)
+                                        mediaCard.mediaProgress = Math.min(1, p.position / p.length)
+                                    mediaCard.mediaCurrentTime = mediaCard.fmtTime(p ? p.position : 0)
+                                }
+                            }
 
-                                        Item {
-                                            width: 90; height: 90
-                                            Image {
-                                                anchors.fill: parent
-                                                source: modelData.trackArtUrl || ""
-                                                fillMode: Image.PreserveAspectFit
-                                                visible: source.toString() !== ""
-                                            }
-                                            Rectangle {
-                                                anchors.fill: parent
-                                                radius: 8
-                                                color: Config.colors.DarkSurface
-                                                visible: !modelData.trackArtUrl
-                                                Text {
-                                                    anchors.centerIn: parent
-                                                    text: "󰝚"
-                                                    color: Config.colors.Cyan
-                                                    font.family: Config.bar.fontFamily
-                                                    font.pixelSize: 42
-                                                }
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            radius: 12
+                            color: Config.colors.Sand
+                            clip: true
+
+                            RowLayout {
+                                anchors.fill: parent
+                                spacing: 0
+
+                                // ── Left: album art + rotating radial rays ──
+                                Item {
+                                    id: artArea
+                                    Layout.preferredWidth: Math.round(mediaCard.width * 0.32)
+                                    Layout.fillHeight: true
+                                    property real artSize: Math.min(width, height) * 0.5
+
+                                    Canvas {
+                                        id: raysCanvas
+                                        property real breathePhase: 0
+                                        anchors.fill: parent
+                                        onWidthChanged: requestPaint()
+                                        onHeightChanged: requestPaint()
+                                        onPaint: {
+                                            var ctx = getContext("2d")
+                                            ctx.clearRect(0, 0, width, height)
+                                            var cx = width / 2, cy = height / 2
+                                            var halfDiag = (artArea.artSize / 2) * Math.SQRT2
+                                            var innerR = halfDiag + 4
+                                            var outerR = innerR + artArea.artSize * 0.12
+                                            var longDelta = artArea.artSize * 0.04
+                                            var breathe = 0.5 + 0.5 * Math.sin(raysCanvas.breathePhase)
+                                            var growth = artArea.artSize * 0.05 * breathe
+                                            var numRays = 36
+                                            ctx.strokeStyle = "#D18870"
+                                            ctx.lineWidth = Math.max(2, artArea.artSize * 0.02)
+                                            ctx.globalAlpha = 0.6
+                                            ctx.lineCap = "round"
+                                            for (var i = 0; i < numRays; i++) {
+                                                var angle = (i / numRays) * Math.PI * 2 - Math.PI / 2
+                                                var iR = (i % 3 === 0) ? innerR - longDelta : innerR
+                                                var oR = ((i % 3 === 0) ? outerR + longDelta : outerR) + growth
+                                                ctx.beginPath()
+                                                ctx.moveTo(cx + iR * Math.cos(angle), cy + iR * Math.sin(angle))
+                                                ctx.lineTo(cx + oR * Math.cos(angle), cy + oR * Math.sin(angle))
+                                                ctx.stroke()
                                             }
                                         }
 
-                                        ColumnLayout {
-                                            Layout.fillWidth: true
-                                            spacing: 4
-                                            Text {
-                                                Layout.fillWidth: true
-                                                text: modelData.identity || ""
-                                                color: Config.colors.Cyan
-                                                font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 6
-                                                elide: Text.ElideRight
-                                            }
-                                            Text {
-                                                Layout.fillWidth: true
-                                                text: modelData.trackTitle || "—"
-                                                color: Config.colors.CreamyWhite
-                                                font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize
-                                                font.bold: true
-                                                elide: Text.ElideRight
-                                            }
-                                            Text {
-                                                Layout.fillWidth: true
-                                                text: modelData.trackArtist || "—"
-                                                color: Config.colors.Sand
-                                                font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 2
-                                                elide: Text.ElideRight
-                                            }
-                                            Text {
-                                                Layout.fillWidth: true
-                                                visible: modelData.trackAlbum !== ""
-                                                text: modelData.trackAlbum
-                                                color: Config.colors.Cyan
-                                                font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 4
-                                                elide: Text.ElideRight
+                                        // One revolution every 30s + ~2.4s breathe cycle while playing; freezes in place on pause
+                                        FrameAnimation {
+                                            running: mediaCard.player && mediaCard.player.isPlaying
+                                            onTriggered: {
+                                                raysCanvas.rotation = (raysCanvas.rotation + frameTime * 12) % 360
+                                                raysCanvas.breathePhase = (raysCanvas.breathePhase + frameTime * 2.6) % (Math.PI * 2)
+                                                raysCanvas.requestPaint()
                                             }
                                         }
                                     }
 
-                                    RowLayout {
+                                    Rectangle {
+                                        width: artArea.artSize; height: artArea.artSize
+                                        anchors.centerIn: parent
+                                        radius: artArea.artSize * 0.1
+                                        clip: true
+                                        color: Config.colors.Orange
+
+                                        Image {
+                                            anchors.fill: parent
+                                            source: mediaCard.player ? (mediaCard.player.trackArtUrl || "") : ""
+                                            fillMode: Image.PreserveAspectCrop
+                                            visible: source.toString() !== ""
+                                        }
+
+                                        Text {
+                                            visible: !mediaCard.player || !mediaCard.player.trackArtUrl
+                                            anchors.centerIn: parent
+                                            text: "󰝚"
+                                            color: Config.colors.panel
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: artArea.artSize * 0.4
+                                        }
+                                    }
+                                }
+
+                                // ── Center: info + controls + progress ──
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    Layout.leftMargin: 24
+                                    Layout.rightMargin: 24
+                                    spacing: 10
+
+                                    Item { Layout.fillHeight: true }
+
+                                    Text {
                                         Layout.fillWidth: true
+                                        horizontalAlignment: Text.AlignHCenter
+                                        text: mediaCard.player ? (mediaCard.player.trackTitle || "—") : "—"
+                                        color: Config.colors.text
+                                        font.family: Config.bar.fontFamily
+                                        font.pixelSize: Config.bar.fontSize + 8
+                                        font.bold: true
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        horizontalAlignment: Text.AlignHCenter
+                                        text: mediaCard.player ? (mediaCard.player.trackArtist || "—") : "—"
+                                        color: Config.colors.subtext
+                                        font.family: Config.bar.fontFamily
+                                        font.pixelSize: Config.bar.fontSize - 4
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        horizontalAlignment: Text.AlignHCenter
+                                        visible: mediaCard.player && mediaCard.player.trackAlbum !== ""
+                                        text: mediaCard.player ? (mediaCard.player.trackAlbum || "") : ""
+                                        color: Config.colors.Orange
+                                        font.family: Config.bar.fontFamily
+                                        font.pixelSize: Config.bar.fontSize - 4
+                                        elide: Text.ElideRight
+                                    }
+
+                                    RowLayout {
                                         Layout.alignment: Qt.AlignHCenter
                                         spacing: 28
+
                                         Text {
-                                            text: "⏮"
-                                            color: modelData.canGoPrevious ? Config.colors.Sand : Config.colors.Cyan
-                                            font.pixelSize: Config.bar.fontSize + 4
-                                            opacity: modelData.canGoPrevious ? 1.0 : 0.35
+                                            text: ""
+                                            color: Config.colors.text
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize + 8
+                                            opacity: mediaCard.player && mediaCard.player.canGoPrevious ? 1.0 : 0.3
                                             MouseArea {
                                                 anchors.fill: parent
-                                                onClicked: if (modelData.canGoPrevious) modelData.previous()
+                                                onClicked: if (mediaCard.player && mediaCard.player.canGoPrevious) mediaCard.player.previous()
                                             }
                                         }
-                                        Text {
-                                            text: modelData.isPlaying ? "⏸" : "⏵"
-                                            color: Config.colors.Turqoise
-                                            font.pixelSize: Config.bar.fontSize + 10
+
+                                        Rectangle {
+                                            width: 56; height: 56; radius: 28
+                                            color: Config.colors.Orange
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: mediaCard.player && mediaCard.player.isPlaying ? "" : ""
+                                                color: Config.colors.panel
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: Config.bar.fontSize + 10
+                                            }
                                             MouseArea {
                                                 anchors.fill: parent
-                                                onClicked: modelData.togglePlaying()
+                                                onClicked: if (mediaCard.player) mediaCard.player.togglePlaying()
                                             }
                                         }
+
                                         Text {
-                                            text: "⏭"
-                                            color: modelData.canGoNext ? Config.colors.Sand : Config.colors.Cyan
-                                            font.pixelSize: Config.bar.fontSize + 4
-                                            opacity: modelData.canGoNext ? 1.0 : 0.35
+                                            text: ""
+                                            color: Config.colors.text
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize + 8
+                                            opacity: mediaCard.player && mediaCard.player.canGoNext ? 1.0 : 0.3
                                             MouseArea {
                                                 anchors.fill: parent
-                                                onClicked: if (modelData.canGoNext) modelData.next()
+                                                onClicked: if (mediaCard.player && mediaCard.player.canGoNext) mediaCard.player.next()
                                             }
                                         }
                                     }
@@ -1593,26 +1672,53 @@ PanelWindow {
                                     Item {
                                         Layout.fillWidth: true
                                         height: 6
-                                        visible: modelData.positionSupported && modelData.lengthSupported && modelData.length > 0
+                                        visible: mediaCard.player && mediaCard.player.lengthSupported && mediaCard.player.length > 0
                                         Rectangle {
                                             anchors.fill: parent
                                             radius: 3
-                                            color: Config.colors.DarkSurface
+                                            color: Qt.rgba(1, 1, 1, 0.10)
                                         }
                                         Rectangle {
-                                            width: parent.width * Math.min(1, modelData.length > 0 ? modelData.position / modelData.length : 0)
+                                            width: parent.width * mediaCard.mediaProgress
                                             height: parent.height
                                             radius: 3
-                                            color: Config.colors.Turqoise
+                                            color: Config.colors.Orange
+                                            Behavior on width { NumberAnimation { duration: 900; easing.type: Easing.Linear } }
                                         }
                                     }
 
-                                    Rectangle {
+                                    RowLayout {
                                         Layout.fillWidth: true
-                                        height: 1
-                                        color: Config.colors.Sand
-                                        opacity: 0.2
-                                        visible: playerIdx < Mpris.players.count - 1
+                                        visible: mediaCard.player && mediaCard.player.lengthSupported && mediaCard.player.length > 0
+                                        Text {
+                                            text: mediaCard.mediaCurrentTime
+                                            color: Config.colors.subtext
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 6
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                        Text {
+                                            text: mediaCard.fmtTime(mediaCard.player ? mediaCard.player.length : 0)
+                                            color: Config.colors.subtext
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 6
+                                        }
+                                    }
+
+                                    Item { Layout.fillHeight: true }
+                                }
+
+                                // ── Right: GIF ──
+                                Item {
+                                    Layout.preferredWidth: Math.round(mediaCard.width * 0.16)
+                                    Layout.fillHeight: true
+
+                                    AnimatedImage {
+                                        anchors.centerIn: parent
+                                        width: Math.min(parent.width * 0.8, 160); height: width
+                                        source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/assets/kurukuru.gif"
+                                        playing: mediaCard.player && mediaCard.player.isPlaying
+                                        fillMode: Image.PreserveAspectFit
                                     }
                                 }
                             }
@@ -1630,7 +1736,7 @@ PanelWindow {
 
                     Repeater {
                         model: [
-                            { label: "CPU",    icon: "󰍛", value: dashboard.cpuValue,  color: Config.colors.Turqoise },
+                            { label: "CPU",    icon: "󰍛", value: dashboard.cpuValue,  color: Config.colors.Teal },
                             { label: "RAM",    icon: "󰘚", value: dashboard.ramValue,  color: Config.colors.Sand     },
                             { label: "Disk /", icon: "󰋊", value: dashboard.diskValue, color: Config.colors.Orange   }
                         ]
@@ -1671,7 +1777,7 @@ PanelWindow {
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: 5
-                                    color: Config.colors.DarkSurface
+                                    color: Config.colors.panel
                                 }
                                 Rectangle {
                                     width: Math.max(0, parent.width * modelData.value / 100)
