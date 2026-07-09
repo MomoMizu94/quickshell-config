@@ -52,6 +52,7 @@ PanelWindow {
     property string weatherHumidity: "--"
     property string weatherWindSpeed: "--"
     property string weatherWindDir: ""
+    property var weatherForecast: []
 
     property string sysOs: ""
     property string sysKernel: ""
@@ -251,6 +252,12 @@ PanelWindow {
                 dashboard.weatherHumidity = cur.humidity
                 dashboard.weatherWindSpeed = (parseFloat(cur.windspeedKmph) / 3.6).toFixed(1)
                 dashboard.weatherWindDir = cur.winddir16Point
+                dashboard.weatherForecast = d.weather.map(w => ({
+                    day: Qt.formatDate(new Date(w.date), "ddd").toUpperCase(),
+                    desc: w.hourly[4].weatherDesc[0].value,
+                    high: w.maxtempC,
+                    low: w.mintempC
+                }))
             } catch(e) {}
         }
     }
@@ -308,7 +315,7 @@ PanelWindow {
     function toggleNight() {
         actionProc.command = nightEnabled
             ? ["pkill", "wlsunset"]
-            : ["wlsunset", "-T", "4500"]
+            : ["wlsunset", "-T", "5000"]
         actionProc.startDetached()
         nightEnabled = !nightEnabled
     }
@@ -887,10 +894,10 @@ PanelWindow {
                                     Repeater {
                                         // Static data only — no live values in the model so delegates are never recreated
                                         model: [
-                                            { icon: "󰍛", color: Config.colors.Teal   },
+                                            { icon: "", color: Config.colors.Teal   },
                                             { icon: "󰾲", color: Config.colors.Purple },
-                                            { icon: "󰘚", color: Config.colors.Black   },
-                                            { icon: "󰋊", color: Config.colors.Orange },
+                                            { icon: "", color: Config.colors.Black   },
+                                            { icon: "", color: Config.colors.Orange },
                                         ]
                                         delegate: ColumnLayout {
                                             required property var modelData
@@ -1017,19 +1024,64 @@ PanelWindow {
                                     font.family: Config.bar.fontFamily
                                     font.pixelSize: Config.bar.fontSize - 5
                                 }
-                                
+
                                 Item { Layout.fillHeight: true }
 
-                            }
+                                // 3-day forecast strip
+                                ColumnLayout {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    Layout.bottomMargin: 20
+                                    Text {
+                                        text: "WEATHER FORECAST"
+                                        color: Config.colors.Grey
+                                        font.family: Config.bar.fontFamily
+                                        font.pixelSize: Config.bar.fontSize
+                                        font.bold: true
+                                        font.letterSpacing: 1.5
+                                    }
+                                }
 
-                            AnimatedImage {
-                                anchors.bottom: parent.bottom
-                                anchors.right: parent.right
-                                anchors.margins: 10
-                                source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/assets/clouds.gif"
-                                playing: true
-                                width: 264; height: 264
-                                fillMode: Image.PreserveAspectFit
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Layout.bottomMargin: 20
+                                    Layout.alignment: Qt.AlignHCenter
+                                    spacing: 100
+
+                                    Repeater {
+                                        model: 3
+                                        delegate: ColumnLayout {
+                                            required property int index
+                                            property var fc: dashboard.weatherForecast[index] || null
+                                            Layout.fillWidth: true
+                                            spacing: 2
+                                            visible: fc !== null
+
+                                            Text {
+                                                Layout.alignment: Qt.AlignHCenter
+                                                text: fc ? fc.day : ""
+                                                color: Config.colors.Grey
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: Config.bar.fontSize - 4
+                                                font.bold: true
+                                                font.letterSpacing: 1
+                                            }
+                                            Text {
+                                                Layout.alignment: Qt.AlignHCenter
+                                                text: fc ? dashboard.weatherIcon(fc.desc) : ""
+                                                color: Config.colors.DarkTeal
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: Config.bar.fontSize + 12
+                                            }
+                                            Text {
+                                                Layout.alignment: Qt.AlignHCenter
+                                                text: fc ? fc.high + "° / " + fc.low + "°" : ""
+                                                color: Config.colors.Grey
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: Config.bar.fontSize - 4
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -1970,10 +2022,10 @@ PanelWindow {
 
                                 Repeater {
                                     model: [
-                                        { icon: "󰕒", label: "upload" },
-                                        { icon: "󰇚", label: "download" },
-                                        { icon: "󰋊", label: "disk /" },
-                                        { icon: "󰅴", label: "processes" }
+                                        { icon: "", label: "upload" },
+                                        { icon: "", label: "download" },
+                                        { icon: "", label: "disk /" },
+                                        { icon: "", label: "processes" }
                                     ]
                                     delegate: RowLayout {
                                         id: infoRow

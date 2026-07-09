@@ -10,6 +10,8 @@ import "config.js" as Config
 
 PanelWindow {
     property var notifModel
+    property bool dndEnabled: false
+    visible: !dndEnabled
 
     anchors { top: true; right: true }
     margins { top: 18; right: 18 }

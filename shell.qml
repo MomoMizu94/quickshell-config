@@ -37,8 +37,7 @@ Scope {
         imageSupported: true
 
         onNotification: n => {
-            //soundPlayer.startDetached()
-            if (root.playNotificationSound(n))
+            if (!dash.dndEnabled && root.playNotificationSound(n))
                 soundPlayer.startDetached()
             history.insert(0, {
                 summary: n.summary,
@@ -66,9 +65,11 @@ Scope {
 
     NotificationPopup {
         notifModel: server.trackedNotifications
+        dndEnabled: dash.dndEnabled
     }
 
     Dashboard {
+        id: dash
         visible: root.centerOpen
         historyModel: history
         onCloseRequested: root.centerOpen = false
