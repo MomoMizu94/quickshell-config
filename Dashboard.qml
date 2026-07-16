@@ -8,6 +8,7 @@ import Quickshell.Widgets
 import QtQuick.Effects
 
 import "config.js" as Config
+import "secrets.js" as Secrets
 
 
 PanelWindow {
@@ -53,6 +54,11 @@ PanelWindow {
     property string weatherWindSpeed: "--"
     property string weatherWindDir: ""
     property var weatherForecast: []
+    property real weatherLat: Secrets.lat
+    property real weatherLon: Secrets.lon
+    property int mapZoom: 7
+    property var radarFrames: []
+    property int radarIdx: 0
 
     property string sysOs: ""
     property string sysKernel: ""
@@ -231,43 +237,109 @@ PanelWindow {
         wifiCheckProc.running = true
         btCheckProc.running = true
         nightCheckProc.running = true
+        if (dashboard.weatherLat === 0 || dashboard.weatherLon === 0)
+            locProc.running = true
     }
 
     // ── Weather ──
+    // Resolve location by IP unless secrets.js pins a fixed lat/lon
+    Process {
+        id: locProc
+        command: ["bash", "-c", "curl -sf 'http://ip-api.com/json'"]
+        stdout: StdioCollector { id: locOut }
+        onExited: {
+            try {
+                const d = JSON.parse(locOut.text)
+                if (d.status === "success") {
+                    dashboard.weatherLat = d.lat
+                    dashboard.weatherLon = d.lon
+                }
+            } catch(e) {}
+        }
+    }
+
     Process {
         id: weatherProc
-        command: ["bash", "-c", "curl -sf 'https://wttr.in?format=j1'"]
+        command: ["bash", "-c",
+            "echo \"{\\\"cur\\\":$(curl -sf 'https://api.openweathermap.org/data/2.5/weather?lat="
+            + dashboard.weatherLat + "&lon=" + dashboard.weatherLon
+            + "&units=metric&appid=" + Secrets.owmApiKey
+            + "'),\\\"fc\\\":$(curl -sf 'https://api.openweathermap.org/data/2.5/forecast?lat="
+            + dashboard.weatherLat + "&lon=" + dashboard.weatherLon
+            + "&units=metric&appid=" + Secrets.owmApiKey + "')}\""]
         stdout: StdioCollector { id: weatherOut }
         onExited: {
             try {
                 const d = JSON.parse(weatherOut.text)
-                const cur = d.current_condition[0]
-                const area = d.nearest_area[0]
-                const today = d.weather[0]
-                dashboard.weatherTemp = cur.temp_C
-                dashboard.weatherDesc = cur.weatherDesc[0].value
-                dashboard.weatherLocation = area.areaName[0].value
-                dashboard.weatherHigh = today.maxtempC
-                dashboard.weatherLow = today.mintempC
-                dashboard.weatherHumidity = cur.humidity
-                dashboard.weatherWindSpeed = (parseFloat(cur.windspeedKmph) / 3.6).toFixed(1)
-                dashboard.weatherWindDir = cur.winddir16Point
-                dashboard.weatherForecast = d.weather.map(w => ({
-                    day: Qt.formatDate(new Date(w.date), "ddd").toUpperCase(),
-                    desc: w.hourly[4].weatherDesc[0].value,
-                    high: w.maxtempC,
-                    low: w.mintempC
-                }))
+                const cur = d.cur
+                dashboard.weatherTemp = "" + Math.round(cur.main.temp)
+                dashboard.weatherDesc = cur.weather[0].description
+                dashboard.weatherLocation = cur.name
+                dashboard.weatherHumidity = "" + cur.main.humidity
+                dashboard.weatherWindSpeed = cur.wind.speed.toFixed(1)
+                dashboard.weatherWindDir = dashboard.windDir16(cur.wind.deg)
+
+                // Group the 3-hour forecast entries by date
+                const days = []
+                const byDate = {}
+                for (const item of d.fc.list) {
+                    const date = item.dt_txt.split(" ")[0]
+                    if (!byDate[date]) { byDate[date] = []; days.push(date) }
+                    byDate[date].push(item)
+                }
+                const daily = days.map(date => {
+                    const items = byDate[date]
+                    // Condition from the entry closest to midday
+                    let mid = items[0]
+                    for (const it of items) {
+                        const h = parseInt(it.dt_txt.split(" ")[1])
+                        if (Math.abs(h - 12) < Math.abs(parseInt(mid.dt_txt.split(" ")[1]) - 12))
+                            mid = it
+                    }
+                    return {
+                        day: Qt.formatDate(new Date(date), "ddd").toUpperCase(),
+                        desc: mid.weather[0].main,
+                        high: Math.round(Math.max(...items.map(i => i.main.temp_max))),
+                        low: Math.round(Math.min(...items.map(i => i.main.temp_min)))
+                    }
+                })
+                if (daily.length > 0) {
+                    dashboard.weatherHigh = "" + daily[0].high
+                    dashboard.weatherLow = "" + daily[0].low
+                }
+                dashboard.weatherForecast = daily.slice(0, 3)
+            } catch(e) {}
+        }
+    }
+
+    // RainViewer radar frame index (past 2h + nowcast when available)
+    Process {
+        id: radarProc
+        command: ["bash", "-c", "curl -sf 'https://api.rainviewer.com/public/weather-maps.json'"]
+        stdout: StdioCollector { id: radarOut }
+        onExited: {
+            try {
+                const d = JSON.parse(radarOut.text)
+                const frames = []
+                for (const f of d.radar.past)
+                    frames.push({ time: f.time, url: d.host + f.path, future: false })
+                for (const f of (d.radar.nowcast || []))
+                    frames.push({ time: f.time, url: d.host + f.path, future: true })
+                dashboard.radarFrames = frames
+                if (dashboard.radarIdx >= frames.length) dashboard.radarIdx = 0
             } catch(e) {}
         }
     }
 
     Timer {
         interval: 600000
-        running: dashboard.visible
+        running: dashboard.visible && dashboard.weatherLat !== 0
         repeat: true
         triggeredOnStart: true
-        onTriggered: if (!weatherProc.running) weatherProc.running = true
+        onTriggered: {
+            if (!weatherProc.running) weatherProc.running = true
+            if (!radarProc.running) radarProc.running = true
+        }
     }
 
     Timer {
@@ -318,6 +390,22 @@ PanelWindow {
             : ["wlsunset", "-T", "5000"]
         actionProc.startDetached()
         nightEnabled = !nightEnabled
+    }
+
+    function windDir16(deg) {
+        const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"]
+        return dirs[Math.round(((deg % 360) / 22.5)) % 16]
+    }
+
+    // Slippy-map tile coordinate conversions
+    function lonToTileX(lon, z) { return (lon + 180) / 360 * Math.pow(2, z) }
+    function latToTileY(lat, z) {
+        const rad = lat * Math.PI / 180
+        return (1 - Math.asinh(Math.tan(rad)) / Math.PI) / 2 * Math.pow(2, z)
+    }
+    function tileXToLon(x, z) { return x / Math.pow(2, z) * 360 - 180 }
+    function tileYToLat(y, z) {
+        return Math.atan(Math.sinh(Math.PI * (1 - 2 * y / Math.pow(2, z)))) * 180 / Math.PI
     }
 
     function weatherIcon(desc) {
@@ -968,64 +1056,238 @@ PanelWindow {
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Layout.bottomMargin: 24
-                                    Text {
-                                        text: dashboard.weatherTemp + "°"
+                                    Layout.fillHeight: true
+                                    spacing: 14
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        Layout.fillHeight: true
+                                        spacing: 6
+
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            Layout.bottomMargin: 24
+                                            Text {
+                                                text: dashboard.weatherTemp + "°"
+                                                color: Config.colors.DarkTeal
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: Config.bar.fontSize + 50
+                                                font.bold: true
+                                            }
+                                            Item { Layout.fillWidth: true }
+                                            Text {
+                                                text: dashboard.weatherIcon(dashboard.weatherDesc)
+                                                font.family: Config.bar.fontFamily
+                                                font.pixelSize: Config.bar.fontSize + 50
+                                            }
+                                        }
+
+                                        Text {
+                                            Layout.fillWidth: true
+                                            visible: dashboard.weatherLocation !== ""
+                                            text: dashboard.weatherLocation
+                                            color: Config.colors.Grey
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 5
+                                            elide: Text.ElideRight
+                                        }
+
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: dashboard.weatherDesc !== "" ? dashboard.weatherDesc : "Loading…"
+                                            color: Config.colors.Grey
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 5
+                                            elide: Text.ElideRight
+                                        }
+
+                                        Text {
+                                            text: "H: " + dashboard.weatherHigh + "°  L: " + dashboard.weatherLow
+                                                + "°"
+                                            color: Config.colors.Grey
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 5
+                                        }
+
+                                        Text {
+                                            text: dashboard.weatherHumidity + "% humidity"
+                                            color: Config.colors.Grey
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 5
+                                        }
+
+                                        Text {
+                                            text: "Wind: " + dashboard.weatherWindSpeed + " m/s " + dashboard.weatherWindDir
+                                            color: Config.colors.Grey
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 5
+                                        }
+
+                                        Item { Layout.fillHeight: true }
+                                    }
+
+                                    // ── Interactive radar map (drag to pan, wheel to zoom, dbl-click home) ──
+                                    ClippingRectangle {
+                                        id: precipMap
+                                        Layout.fillHeight: true
+                                        Layout.preferredWidth: height
+                                        radius: 8
                                         color: Config.colors.DarkTeal
-                                        font.family: Config.bar.fontFamily
-                                        font.pixelSize: Config.bar.fontSize + 50
-                                        font.bold: true
+                                        visible: dashboard.weatherLat !== 0
+
+                                        property real centerLat: dashboard.weatherLat
+                                        property real centerLon: dashboard.weatherLon
+                                        property real xf: dashboard.lonToTileX(centerLon, dashboard.mapZoom)
+                                        property real yf: dashboard.latToTileY(centerLat, dashboard.mapZoom)
+                                        property bool radarPlaying: true
+                                        property var radarFrame: dashboard.radarFrames[dashboard.radarIdx] || null
+
+                                        Timer {
+                                            interval: dashboard.radarIdx === dashboard.radarFrames.length - 1 ? 2200 : 650
+                                            repeat: true
+                                            running: dashboard.visible && dashboard.activeTab === 0
+                                                     && precipMap.radarPlaying && dashboard.radarFrames.length > 0
+                                            onTriggered: dashboard.radarIdx = (dashboard.radarIdx + 1) % dashboard.radarFrames.length
+                                        }
+
+                                        Item {
+                                            // 5×5 tile grid centered on the fractional position
+                                            anchors.centerIn: parent
+                                            width: 1280; height: 1280
+                                            anchors.horizontalCenterOffset: -((precipMap.xf % 1) - 0.5) * 256
+                                            anchors.verticalCenterOffset: -((precipMap.yf % 1) - 0.5) * 256
+
+                                            Repeater {
+                                                model: 25
+                                                delegate: Item {
+                                                    required property int index
+                                                    property int dx: (index % 5) - 2
+                                                    property int dy: Math.floor(index / 5) - 2
+
+                                                    // Atomic URL build: range check and URL always agree
+                                                    function tileUrl(prefix, suffix) {
+                                                        const z = dashboard.mapZoom
+                                                        const n = Math.pow(2, z)
+                                                        const tx = (((Math.floor(precipMap.xf) + dx) % n) + n) % n
+                                                        const ty = Math.floor(precipMap.yf) + dy
+                                                        if (ty < 0 || ty >= n) return ""
+                                                        return prefix + z + "/" + tx + "/" + ty + suffix
+                                                    }
+
+                                                    x: (dx + 2) * 256
+                                                    y: (dy + 2) * 256
+                                                    width: 256; height: 256
+
+                                                    Image {
+                                                        anchors.fill: parent
+                                                        asynchronous: true
+                                                        source: parent.tileUrl("https://basemaps.cartocdn.com/rastertiles/voyager/", ".png")
+                                                        opacity: 0.85
+                                                    }
+                                                    Image {
+                                                        anchors.fill: parent
+                                                        asynchronous: true
+                                                        cache: true
+                                                        visible: precipMap.radarFrame !== null
+                                                        source: precipMap.radarFrame
+                                                            ? parent.tileUrl(precipMap.radarFrame.url + "/256/", "/2/1_1.png")
+                                                            : ""
+                                                        opacity: 0.8
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Home marker — pinned to the real location
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            anchors.horizontalCenterOffset: (dashboard.lonToTileX(dashboard.weatherLon, dashboard.mapZoom) - precipMap.xf) * 256
+                                            anchors.verticalCenterOffset: (dashboard.latToTileY(dashboard.weatherLat, dashboard.mapZoom) - precipMap.yf) * 256
+                                            width: 12; height: 12; radius: 6
+                                            color: Config.colors.Orange
+                                            border.width: 2
+                                            border.color: Config.colors.CreamyWhite
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            property real pressXf: 0
+                                            property real pressYf: 0
+                                            property real pressX: 0
+                                            property real pressY: 0
+
+                                            onPressed: mouse => {
+                                                pressXf = precipMap.xf; pressYf = precipMap.yf
+                                                pressX = mouse.x; pressY = mouse.y
+                                            }
+                                            onPositionChanged: mouse => {
+                                                if (!pressed) return
+                                                const z = dashboard.mapZoom
+                                                const newXf = pressXf - (mouse.x - pressX) / 256
+                                                const newYf = pressYf - (mouse.y - pressY) / 256
+                                                precipMap.centerLon = dashboard.tileXToLon(newXf, z)
+                                                precipMap.centerLat = Math.max(-85, Math.min(85, dashboard.tileYToLat(newYf, z)))
+                                            }
+                                            onWheel: wheel => {
+                                                const step = wheel.angleDelta.y > 0 ? 1 : -1
+                                                dashboard.mapZoom = Math.max(3, Math.min(12, dashboard.mapZoom + step))
+                                            }
+                                            onDoubleClicked: {
+                                                precipMap.centerLat = Qt.binding(() => dashboard.weatherLat)
+                                                precipMap.centerLon = Qt.binding(() => dashboard.weatherLon)
+                                                dashboard.mapZoom = 7
+                                            }
+                                        }
+
+                                        // Radar time HUD — click to play/pause
+                                        Rectangle {
+                                            anchors.bottom: parent.bottom
+                                            anchors.left: parent.left
+                                            anchors.margins: 6
+                                            radius: 6
+                                            color: Qt.rgba(0, 0, 0, 0.45)
+                                            width: hudRow.implicitWidth + 16
+                                            height: hudRow.implicitHeight + 8
+                                            visible: precipMap.radarFrame !== null
+
+                                            RowLayout {
+                                                id: hudRow
+                                                anchors.centerIn: parent
+                                                spacing: 6
+                                                Text {
+                                                    text: precipMap.radarPlaying ? "" : ""
+                                                    color: Config.colors.CreamyWhite
+                                                    font.family: Config.bar.fontFamily
+                                                    font.pixelSize: Config.bar.fontSize - 8
+                                                }
+                                                Text {
+                                                    text: precipMap.radarFrame
+                                                        ? Qt.formatTime(new Date(precipMap.radarFrame.time * 1000), "HH:mm")
+                                                          + (precipMap.radarFrame.future ? " ⟶ NOWCAST" : "")
+                                                        : ""
+                                                    color: Config.colors.CreamyWhite
+                                                    font.family: Config.bar.fontFamily
+                                                    font.pixelSize: Config.bar.fontSize - 8
+                                                }
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                onClicked: precipMap.radarPlaying = !precipMap.radarPlaying
+                                            }
+                                        }
+
+                                        Text {
+                                            anchors.bottom: parent.bottom
+                                            anchors.right: parent.right
+                                            anchors.margins: 4
+                                            text: "© OSM © CARTO · RainViewer"
+                                            color: Config.colors.DarkTeal
+                                            font.family: Config.bar.fontFamily
+                                            font.pixelSize: Config.bar.fontSize - 12
+                                        }
                                     }
-                                    Item { Layout.fillWidth: true }
-                                    Text {
-                                        text: dashboard.weatherIcon(dashboard.weatherDesc)
-                                        font.family: Config.bar.fontFamily
-                                        font.pixelSize: Config.bar.fontSize + 50
-                                    }
                                 }
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    visible: dashboard.weatherLocation !== ""
-                                    text: dashboard.weatherLocation
-                                    color: Config.colors.Grey
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 5
-                                    elide: Text.ElideRight
-                                }
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: dashboard.weatherDesc !== "" ? dashboard.weatherDesc : "Loading…"
-                                    color: Config.colors.Grey
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 5
-                                    elide: Text.ElideRight
-                                }
-
-                                Text {
-                                    text: "H: " + dashboard.weatherHigh + "°  L: " + dashboard.weatherLow
-                                        + "°"
-                                    color: Config.colors.Grey
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 5
-                                }
-
-                                Text {
-                                    text: dashboard.weatherHumidity + "% humidity"
-                                    color: Config.colors.Grey
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 5
-                                }
-
-                                Text {
-                                    text: "Wind: " + dashboard.weatherWindSpeed + " m/s " + dashboard.weatherWindDir
-                                    color: Config.colors.Grey
-                                    font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 5
-                                }
-
-                                Item { Layout.fillHeight: true }
 
                                 // 3-day forecast strip
                                 ColumnLayout {
