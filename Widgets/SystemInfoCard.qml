@@ -8,7 +8,6 @@ import "../config.js" as Config
 Rectangle {
     required property var dashboard
     Layout.preferredWidth: 400
-    Layout.fillHeight: true
     radius: Config.radius.xl
     color: Colors.card
 

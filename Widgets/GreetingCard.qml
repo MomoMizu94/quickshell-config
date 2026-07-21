@@ -7,7 +7,6 @@ Rectangle {
     id: greetingCard
     required property var dashboard
     Layout.fillWidth: true
-    Layout.fillHeight: true
     radius: Config.radius.xl
     color: Colors.card
 

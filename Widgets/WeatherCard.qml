@@ -8,7 +8,6 @@ Rectangle {
     required property var dashboard
     //implicitWidth: weatherContent.implicitWidth + 24
     Layout.fillWidth: true
-    Layout.fillHeight: true
     radius: Config.radius.xl
     color: Colors.card
     clip: true

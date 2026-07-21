@@ -7,7 +7,6 @@ Rectangle {
     required property var dashboard
     //Layout.fillWidth: true
     Layout.preferredWidth: 400
-    Layout.fillHeight: true
     radius: Config.radius.xl
     color: Colors.card
 
