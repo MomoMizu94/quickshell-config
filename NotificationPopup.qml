@@ -25,7 +25,7 @@ PanelWindow {
     ColumnLayout {
         id: column
         width: parent.width
-        spacing: 10
+        spacing: Config.gap.md
 
         Repeater {
             model: notifModel
@@ -41,17 +41,17 @@ PanelWindow {
 
                 Layout.fillWidth: true
                 Layout.preferredHeight: layout.implicitHeight + 28
-                radius: 8
+                radius: Config.radius.xl
                 color: Colors.surface
-                border.width: 8
+                border.width: Config.gap.xs
                 border.color: modelData.urgency === NotificationUrgency.Critical
                 ? Colors.error : Colors.border
 
                 RowLayout {
                     id: layout
                     anchors.fill: parent
-                    anchors.margins: 14
-                    spacing: 10
+                    anchors.margins: Config.gap.md
+                    spacing: Config.gap.md
 
                     Item {
                         Layout.preferredWidth: 132
@@ -85,14 +85,14 @@ PanelWindow {
 
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 2
+                        spacing: Config.gap.xs
 
                         Text {
                             Layout.fillWidth: true
                             text: card.modelData.summary
-                            color: Colors.border
+                            color: Colors.text
                             font.family: Config.bar.fontFamily
-                            font.pixelSize: Config.bar.fontSize
+                            font.pixelSize: Config.type.lg
                             font.bold: true
                             elide: Text.ElideRight
                         }
@@ -103,7 +103,7 @@ PanelWindow {
                             text: card.modelData.body
                             color: Colors.subtext
                             font.family: Config.bar.fontFamily
-                            font.pixelSize: Config.bar.fontSize - 4
+                            font.pixelSize: Config.type.base
                             wrapMode: Text.WordWrap
                         }
                     }

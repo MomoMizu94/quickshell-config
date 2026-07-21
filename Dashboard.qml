@@ -333,7 +333,7 @@ PanelWindow {
     }
 
     Timer {
-        interval: 600000
+        interval: Config.timer.weatherRefresh
         running: dashboard.visible && dashboard.weatherLat !== 0
         repeat: true
         triggeredOnStart: true
@@ -344,7 +344,7 @@ PanelWindow {
     }
 
     Timer {
-        interval: 2000
+        interval: Config.timer.hardwareRefresh
         running: dashboard.visible && dashboard.activeTab === 0
         repeat: true
         triggeredOnStart: true
@@ -465,7 +465,7 @@ PanelWindow {
 
         Rectangle {
             anchors.fill: parent
-            radius: 10
+            radius: Config.radius.xl
             color: Colors.surface
         border.width: 8
         border.color: Colors.border
@@ -473,7 +473,7 @@ PanelWindow {
 
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: 14
+            anchors.margins: Config.gap.xl
             spacing: 8
 
             // ══ Tab bar ══
@@ -487,7 +487,6 @@ PanelWindow {
                         { icon: "󰃭", label: "Calendar"      },
                         { icon: "󰝚", label: "Media"         },
                         { icon: "󰓅", label: "Performance"   }
-                        // Workspaces??
                     ]
                     delegate: Item {
                         required property var modelData
@@ -497,31 +496,20 @@ PanelWindow {
 
                         Rectangle {
                             anchors.fill: parent
-                            radius: 6
+                            radius: Config.radius.md
                             color: dashboard.activeTab === index
                                 ? Qt.rgba(0.29, 0.33, 0.42, 0.12)
                                 : "transparent"
                         }
 
-                        ColumnLayout {
+                        Text {
                             anchors.centerIn: parent
-                            spacing: 3
-                            Text {
-                                Layout.alignment: Qt.AlignHCenter
-                                text: modelData.icon
-                                color: dashboard.activeTab === index
-                                    ? Colors.textStrong : Colors.border
-                                font.family: Config.bar.fontFamily
-                                font.pixelSize: Config.bar.fontSize
-                            }
-                            Text {
-                                Layout.alignment: Qt.AlignHCenter
-                                text: modelData.label
-                                color: dashboard.activeTab === index
-                                    ? Colors.textStrong : Colors.border
-                                font.family: Config.bar.fontFamily
-                                font.pixelSize: Config.bar.fontSize - 5
-                            }
+                            Layout.alignment: Qt.AlignHCenter
+                            text: modelData.icon
+                            color: dashboard.activeTab === index
+                                ? Colors.textStrong : Colors.border
+                            font.family: Config.bar.fontFamily
+                            font.pixelSize: Config.type.display
                         }
 
                         Rectangle {
@@ -529,7 +517,7 @@ PanelWindow {
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: parent.width * 0.5
                             height: 4
-                            radius: 4
+                            radius: Config.radius.sm
                             color: Colors.subtext
                             visible: dashboard.activeTab === index
                         }
@@ -560,32 +548,30 @@ PanelWindow {
                 ColumnLayout {
                     anchors.fill: parent
                     visible: dashboard.activeTab === 0
-                    spacing: 16
+                    spacing: Config.gap.lg
 
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 20
+                        spacing: Config.gap.lg
 
                         Rectangle {
                             id: greetingCard
                             Layout.fillWidth: true
-                            radius: 10
+                            radius: Config.radius.xl
                             color: Colors.card
-                            border.width: 4
-                            border.color: Colors.border
                             implicitHeight: quicktoggleContent.implicitHeight + 24
 
                             ColumnLayout {
                                 id: greetingLayout
                                 anchors.fill: parent
-                                anchors.margins: 12
-                                spacing: 4
+                                anchors.margins: Config.gap.md
+                                spacing: Config.gap.xs
 
                                 Text {
                                     text: dashboard.greeting() + ", " + dashboard.userName + "!"
                                     color: Colors.border
                                     font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize + 4
+                                    font.pixelSize: Config.type.xl
                                     font.bold: true
                                 }
 
@@ -593,7 +579,7 @@ PanelWindow {
                                     text: dashboard.currentTime
                                     color: Colors.border
                                     font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize + 50
+                                    font.pixelSize: Config.type.hero
                                     font.bold: true
                                 }
 
@@ -601,7 +587,7 @@ PanelWindow {
                                     text: dashboard.currentDate
                                     color: Colors.subtext
                                     font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 2
+                                    font.pixelSize: Config.type.md
                                 }
                             }
                         }
@@ -609,17 +595,15 @@ PanelWindow {
                         // ── System info ──
                         Rectangle {
                             implicitHeight: quicktoggleContent.implicitHeight + 24
-                            implicitWidth: systeminfoContent.implicitWidth + 24
-                            radius: 10
+                            Layout.preferredWidth: 400
+                            radius: Config.radius.xl
                             color: Colors.card
-                            border.width: 4
-                            border.color: Colors.border
 
                             RowLayout {
                                 id: systeminfoContent
                                 anchors.fill: parent
-                                anchors.margins: 12
-                                spacing: 200
+                                anchors.margins: Config.gap.md
+                                spacing: Config.gap.lg
 
                                 // Profile picture
                                 Item {
@@ -655,7 +639,7 @@ PanelWindow {
                                 // Stats column
                                 ColumnLayout {
                                     Layout.fillWidth: true
-                                    spacing: 6
+                                    spacing: Config.gap.sm
 
                                     Repeater {
                                         model: [
@@ -667,20 +651,20 @@ PanelWindow {
                                         delegate: RowLayout {
                                             required property var modelData
                                             Layout.fillWidth: true
-                                            spacing: 8
+                                            spacing: Config.gap.sm
 
                                             Text {
                                                 text: modelData.icon
                                                 color: Colors.accent
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 2
+                                                font.pixelSize: Config.type.md
                                             }
                                             Item { Layout.fillWidth: true }
                                             Text {
                                                 text: modelData.value || "…"
                                                 color: Colors.border
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 4
+                                                font.pixelSize: Config.type.base
                                                 font.bold: true
                                             }
                                         }
@@ -692,24 +676,22 @@ PanelWindow {
                         Rectangle {
                             Layout.fillWidth: true
                             implicitHeight: quicktoggleContent.implicitHeight + 24
-                            radius: 10
+                            radius: Config.radius.xl
                             color: Colors.card
-                            border.width: 4
-                            border.color: Colors.border
 
                             ColumnLayout {
                                 id: quicktoggleContent
                                 anchors.top: parent.top
                                 anchors.left: parent.left
                                 anchors.right: parent.right
-                                anchors.margins: 12
-                                spacing: 6
+                                anchors.margins: Config.gap.md
+                                spacing: Config.gap.sm
 
                                 Text {
                                     text: "QUICK TOGGLES"
                                     color: Colors.subtext
                                     font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 8
+                                    font.pixelSize: Config.type.label
                                     font.bold: true
                                     font.letterSpacing: 1.5
                                 }
@@ -721,57 +703,57 @@ PanelWindow {
                                     columnSpacing: 6
 
                                     Rectangle {
-                                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredHeight: 68; radius: 8
+                                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredHeight: 68; radius: Config.radius.lg
                                         color: dashboard.wifiEnabled ? Qt.rgba(0.82, 0.53, 0.44, 0.3) : Qt.rgba(0,0,0,0.05)
-                                        ColumnLayout { anchors.centerIn: parent; spacing: 2
+                                        ColumnLayout { anchors.centerIn: parent; spacing: Config.gap.xs
                                             Text { Layout.alignment: Qt.AlignHCenter; text: "󰤨"
                                                 color: dashboard.wifiEnabled ? Colors.accent : Colors.subtext
-                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize + 2 }
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.type.xl }
                                             Text { Layout.alignment: Qt.AlignHCenter; text: "Wi-Fi"
                                                 color: dashboard.wifiEnabled ? Colors.border : Colors.subtext
-                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize - 6 }
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.type.sm }
                                         }
                                         MouseArea { anchors.fill: parent; onClicked: dashboard.toggleWifi() }
                                     }
 
                                     Rectangle {
-                                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredHeight: 68; radius: 8
+                                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredHeight: 68; radius: Config.radius.lg
                                         color: dashboard.bluetoothEnabled ? Qt.rgba(0.82, 0.53, 0.44, 0.3) : Qt.rgba(0,0,0,0.05)
-                                        ColumnLayout { anchors.centerIn: parent; spacing: 2
+                                        ColumnLayout { anchors.centerIn: parent; spacing: Config.gap.xs
                                             Text { Layout.alignment: Qt.AlignHCenter; text: "󰂯"
                                                 color: dashboard.bluetoothEnabled ? Colors.accent : Colors.subtext
-                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize + 2 }
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.type.xl }
                                             Text { Layout.alignment: Qt.AlignHCenter; text: "Bluetooth"
                                                 color: dashboard.bluetoothEnabled ? Colors.border : Colors.subtext
-                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize - 6 }
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.type.sm }
                                         }
                                         MouseArea { anchors.fill: parent; onClicked: dashboard.toggleBluetooth() }
                                     }
 
                                     Rectangle {
-                                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredHeight: 68; radius: 8
+                                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredHeight: 68; radius: Config.radius.lg
                                         color: dashboard.dndEnabled ? Qt.rgba(0.82, 0.53, 0.44, 0.3) : Qt.rgba(0,0,0,0.05)
-                                        ColumnLayout { anchors.centerIn: parent; spacing: 2
+                                        ColumnLayout { anchors.centerIn: parent; spacing: Config.gap.xs
                                             Text { Layout.alignment: Qt.AlignHCenter; text: "󰍷"
                                                 color: dashboard.dndEnabled ? Colors.accent : Colors.subtext
-                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize + 2 }
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.type.xl }
                                             Text { Layout.alignment: Qt.AlignHCenter; text: "DND"
                                                 color: dashboard.dndEnabled ? Colors.border : Colors.subtext
-                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize - 6 }
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.type.sm }
                                         }
                                         MouseArea { anchors.fill: parent; onClicked: dashboard.dndEnabled = !dashboard.dndEnabled }
                                     }
 
                                     Rectangle {
-                                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredHeight: 68; radius: 8
+                                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredHeight: 68; radius: Config.radius.lg
                                         color: dashboard.nightEnabled ? Qt.rgba(0.82, 0.53, 0.44, 0.3) : Qt.rgba(0,0,0,0.05)
-                                        ColumnLayout { anchors.centerIn: parent; spacing: 2
+                                        ColumnLayout { anchors.centerIn: parent; spacing: Config.gap.xs
                                             Text { Layout.alignment: Qt.AlignHCenter; text: "󰌵"
                                                 color: dashboard.nightEnabled ? Colors.accent : Colors.subtext
-                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize + 2 }
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.type.xl }
                                             Text { Layout.alignment: Qt.AlignHCenter; text: "Night"
                                                 color: dashboard.nightEnabled ? Colors.border : Colors.subtext
-                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.bar.fontSize - 6 }
+                                                font.family: Config.bar.fontFamily; font.pixelSize: Config.type.sm }
                                         }
                                         MouseArea { anchors.fill: parent; onClicked: dashboard.toggleNight() }
                                     }
@@ -782,7 +764,7 @@ PanelWindow {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 20
+                        spacing: Config.gap.lg
 
                         // ── Now Playing mini widget ──
                         Rectangle {
@@ -790,12 +772,20 @@ PanelWindow {
                             //Layout.fillWidth: true
                             Layout.preferredWidth: 400
                             implicitHeight: musicContent.implicitHeight + 32
-                            radius: 10
+                            radius: Config.radius.xl
                             color: Colors.card
-                            border.width: 4
-                            border.color: Colors.border
 
                             property var player: Mpris.players.values.length > 0 ? Mpris.players.values[0] : null
+
+                            // Optimistic play/pause: flips instantly on click, reconciles with the
+                            // real MPRIS state once the player confirms (spotify_player's Spotify
+                            // Connect round trip can take ~1s)
+                            property bool optimisticPlaying: player ? player.isPlaying : false
+                            onPlayerChanged: optimisticPlaying = player ? player.isPlaying : false
+                            Connections {
+                                target: musicCard.player
+                                function onIsPlayingChanged() { musicCard.optimisticPlaying = musicCard.player.isPlaying }
+                            }
 
                             function fmtTime(secs) {
                                 var s = Math.floor(secs || 0)
@@ -803,8 +793,8 @@ PanelWindow {
                             }
 
                             Timer {
-                                interval: 1000
-                                running: !!musicCard.player && musicCard.player.isPlaying
+                                interval: Config.timer.interval
+                                running: !!musicCard.player && musicCard.optimisticPlaying
                                 repeat: true
                                 onTriggered: progressRing.requestPaint()
                             }
@@ -815,7 +805,7 @@ PanelWindow {
                                 text: "No media playing"
                                 color: Colors.subtext
                                 font.family: Config.bar.fontFamily
-                                font.pixelSize: Config.bar.fontSize - 4
+                                font.pixelSize: Config.type.base
                             }
 
                             ColumnLayout {
@@ -824,8 +814,8 @@ PanelWindow {
                                 anchors.top: parent.top
                                 anchors.left: parent.left
                                 anchors.right: parent.right
-                                anchors.margins: 16
-                                spacing: 8
+                                anchors.margins: Config.gap.lg
+                                spacing: Config.gap.sm
 
                                 // ── Album art with circular progress ring ──
                                 Item {
@@ -902,7 +892,7 @@ PanelWindow {
                                                 text: "󰝚"
                                                 color: Colors.card
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: 48
+                                                font.pixelSize: Config.type.display
                                             }
                                         }
                                     }
@@ -915,7 +905,7 @@ PanelWindow {
                                     text: musicCard.player ? (musicCard.player.trackTitle || "—") : "—"
                                     color: Colors.border
                                     font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 2
+                                    font.pixelSize: Config.type.md
                                     font.bold: true
                                     elide: Text.ElideRight
                                 }
@@ -925,7 +915,7 @@ PanelWindow {
                                     text: musicCard.player ? (musicCard.player.trackArtist || "—") : "—"
                                     color: Colors.subtext
                                     font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 6
+                                    font.pixelSize: Config.type.sm
                                     elide: Text.ElideRight
                                 }
                                 Text {
@@ -934,7 +924,7 @@ PanelWindow {
                                     text: musicCard.player ? (musicCard.player.trackAlbum || "") : ""
                                     color: Colors.accent
                                     font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 8
+                                    font.pixelSize: Config.type.label
                                     elide: Text.ElideRight
                                     visible: musicCard.player && musicCard.player.trackAlbum !== ""
                                 }
@@ -948,22 +938,22 @@ PanelWindow {
                                         text: ""
                                         color: musicCard.player && musicCard.player.canGoPrevious ? Colors.border : Colors.subtext
                                         font.family: Config.bar.fontFamily
-                                        font.pixelSize: Config.bar.fontSize + 2
+                                        font.pixelSize: Config.type.xl
                                         opacity: musicCard.player && musicCard.player.canGoPrevious ? 1.0 : 0.4
                                         MouseArea { anchors.fill: parent; onClicked: if (musicCard.player && musicCard.player.canGoPrevious) musicCard.player.previous() }
                                     }
                                     Text {
-                                        text: musicCard.player && musicCard.player.isPlaying ? "" : ""
+                                        text: musicCard.player && musicCard.optimisticPlaying ? "" : ""
                                         color: Colors.accent
                                         font.family: Config.bar.fontFamily
-                                        font.pixelSize: Config.bar.fontSize + 12
-                                        MouseArea { anchors.fill: parent; onClicked: if (musicCard.player) musicCard.player.togglePlaying() }
+                                        font.pixelSize: Config.type.display
+                                        MouseArea { anchors.fill: parent; onClicked: if (musicCard.player) { musicCard.optimisticPlaying = !musicCard.optimisticPlaying; musicCard.player.togglePlaying() } }
                                     }
                                     Text {
                                         text: ""
                                         color: musicCard.player && musicCard.player.canGoNext ? Colors.border : Colors.subtext
                                         font.family: Config.bar.fontFamily
-                                        font.pixelSize: Config.bar.fontSize + 2
+                                        font.pixelSize: Config.type.xl
                                         opacity: musicCard.player && musicCard.player.canGoNext ? 1.0 : 0.4
                                         MouseArea { anchors.fill: parent; onClicked: if (musicCard.player && musicCard.player.canGoNext) musicCard.player.next() }
                                     }
@@ -973,7 +963,7 @@ PanelWindow {
                                 AnimatedImage {
                                     Layout.alignment: Qt.AlignHCenter
                                     source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/assets/bongocat.gif"
-                                    playing: musicCard.player && musicCard.player.isPlaying
+                                    playing: musicCard.player && musicCard.optimisticPlaying
                                     width: 80; height: 32
                                     fillMode: Image.PreserveAspectFit
                                 }
@@ -985,21 +975,19 @@ PanelWindow {
                             implicitHeight: musicContent.implicitHeight + 32
                             //Layout.fillWidth: true
                             Layout.preferredWidth: 400
-                            radius: 10
+                            radius: Config.radius.xl
                             color: Colors.card
-                            border.width: 4
-                            border.color: Colors.border
 
                             ColumnLayout {
                                 anchors.fill: parent
-                                anchors.margins: 20
-                                spacing: 20
+                                anchors.margins: Config.gap.lg
+                                spacing: Config.gap.lg
 
                                 Text {
                                     text: "HARDWARE"
                                     color: Colors.subtext
                                     font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 8
+                                    font.pixelSize: Config.type.label
                                     font.bold: true
                                     font.letterSpacing: 1.5
                                 }
@@ -1007,14 +995,14 @@ PanelWindow {
                                 RowLayout {
                                     Layout.fillWidth: true
                                     Layout.fillHeight: true
-                                    spacing: 20
+                                    spacing: Config.gap.lg
 
                                     Repeater {
                                         // Static data only — no live values in the model so delegates are never recreated
                                         model: [
                                             { icon: "", color: Colors.accentAlt   },
                                             { icon: "󰾲", color: Colors.accent2 },
-                                            { icon: "", color: Colors.accent3   },
+                                            { icon: "󰘚", color: Colors.accent3   },
                                             { icon: "", color: Colors.accent },
                                         ]
                                         delegate: ColumnLayout {
@@ -1022,7 +1010,7 @@ PanelWindow {
                                             required property int index
                                             Layout.fillWidth: true
                                             Layout.fillHeight: true
-                                            spacing: 20
+                                            spacing: Config.gap.lg
 
                                             // Read live value directly from dashboard by index
                                             property real value: index === 0 ? dashboard.cpuValue
@@ -1034,13 +1022,13 @@ PanelWindow {
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                Rectangle { anchors.fill: parent; radius: 4; color: Qt.rgba(0,0,0,0.1) }
+                                                Rectangle { anchors.fill: parent; radius: Config.radius.sm; color: Qt.rgba(0,0,0,0.1) }
                                                 Rectangle {
                                                     anchors.bottom: parent.bottom
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     height: Math.max(0, parent.height * parent.parent.value / 100)
-                                                    radius: 4
+                                                    radius: Config.radius.sm
                                                     color: modelData.color
                                                     Behavior on height { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
                                                 }
@@ -1051,7 +1039,7 @@ PanelWindow {
                                                 text: modelData.icon
                                                 color: modelData.color
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize + 16
+                                                font.pixelSize: Config.type.display
                                             }
                                         }
                                     }
@@ -1064,22 +1052,20 @@ PanelWindow {
                             implicitHeight: musicCard.implicitHeight
                             //implicitWidth: weatherContent.implicitWidth + 24
                             Layout.fillWidth: true
-                            radius: 10
+                            radius: Config.radius.xl
                             color: Colors.card
-                            border.width: 4
-                            border.color: Colors.border
                             clip: true
 
                             ColumnLayout {
                                 id: weatherContent
                                 anchors.fill: parent
-                                anchors.margins: 12
-                                spacing: 6
+                                anchors.margins: Config.gap.md
+                                spacing: Config.gap.sm
                                 Text {
                                     text: "WEATHER"
                                     color: Colors.subtext
                                     font.family: Config.bar.fontFamily
-                                    font.pixelSize: Config.bar.fontSize - 8
+                                    font.pixelSize: Config.type.label
                                     font.bold: true
                                     font.letterSpacing: 1.5
                                 }
@@ -1087,28 +1073,30 @@ PanelWindow {
                                 RowLayout {
                                     Layout.fillWidth: true
                                     Layout.fillHeight: true
-                                    spacing: 14
+                                    spacing: Config.gap.md
 
                                     ColumnLayout {
                                         Layout.fillWidth: true
                                         Layout.fillHeight: true
-                                        spacing: 6
+                                        spacing: Config.gap.sm
 
                                         RowLayout {
                                             Layout.fillWidth: true
-                                            Layout.bottomMargin: 24
+                                            Layout.bottomMargin: Config.gap.xl
                                             Text {
                                                 text: dashboard.weatherTemp + "°"
                                                 color: Colors.border
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize + 50
+                                                font.pixelSize: Config.type.hero
                                                 font.bold: true
                                             }
                                             Item { Layout.fillWidth: true }
                                             Text {
                                                 text: dashboard.weatherIcon(dashboard.weatherDesc)
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize + 50
+                                                font.pixelSize: Config.type.hero
+                                                color: Colors.border
+                                                font.bold: true
                                             }
                                         }
 
@@ -1118,7 +1106,7 @@ PanelWindow {
                                             text: dashboard.weatherLocation
                                             color: Colors.subtext
                                             font.family: Config.bar.fontFamily
-                                            font.pixelSize: Config.bar.fontSize - 5
+                                            font.pixelSize: Config.type.sm
                                             elide: Text.ElideRight
                                         }
 
@@ -1127,7 +1115,7 @@ PanelWindow {
                                             text: dashboard.weatherDesc !== "" ? dashboard.weatherDesc : "Loading…"
                                             color: Colors.subtext
                                             font.family: Config.bar.fontFamily
-                                            font.pixelSize: Config.bar.fontSize - 5
+                                            font.pixelSize: Config.type.sm
                                             elide: Text.ElideRight
                                         }
 
@@ -1136,21 +1124,21 @@ PanelWindow {
                                                 + "°"
                                             color: Colors.subtext
                                             font.family: Config.bar.fontFamily
-                                            font.pixelSize: Config.bar.fontSize - 5
+                                            font.pixelSize: Config.type.sm
                                         }
 
                                         Text {
                                             text: dashboard.weatherHumidity + "% humidity"
                                             color: Colors.subtext
                                             font.family: Config.bar.fontFamily
-                                            font.pixelSize: Config.bar.fontSize - 5
+                                            font.pixelSize: Config.type.sm
                                         }
 
                                         Text {
                                             text: "Wind: " + dashboard.weatherWindSpeed + " m/s " + dashboard.weatherWindDir
                                             color: Colors.subtext
                                             font.family: Config.bar.fontFamily
-                                            font.pixelSize: Config.bar.fontSize - 5
+                                            font.pixelSize: Config.type.sm
                                         }
 
                                         Item { Layout.fillHeight: true }
@@ -1161,7 +1149,7 @@ PanelWindow {
                                         id: precipMap
                                         Layout.fillHeight: true
                                         Layout.preferredWidth: height
-                                        radius: 8
+                                        radius: Config.radius.lg
                                         color: Colors.border
                                         visible: dashboard.weatherLat !== 0
 
@@ -1182,7 +1170,7 @@ PanelWindow {
 
                                         Timer {
                                             id: settleTimer
-                                            interval: 500
+                                            interval: Config.timer.mapSettle
                                             onTriggered: precipMap.viewSettled = true
                                         }
                                         Component.onCompleted: settleTimer.start()
@@ -1193,7 +1181,7 @@ PanelWindow {
                                         }
 
                                         Timer {
-                                            interval: dashboard.radarIdx === dashboard.radarFrames.length - 1 ? 2200 : 650
+                                            interval: dashboard.radarIdx === dashboard.radarFrames.length - 1 ? Config.timer.radarFrameDwell : Config.timer.radarFrameAdvance
                                             repeat: true
                                             running: dashboard.visible && dashboard.activeTab === 0
                                                      && precipMap.radarPlaying && precipMap.viewSettled
@@ -1206,7 +1194,7 @@ PanelWindow {
                                         // time — gentle enough to stay under RainViewer's rate limit.
                                         // The animation holds on the current frame until all are warm.
                                         Timer {
-                                            interval: 1200
+                                            interval: Config.timer.mapPrefetchStagger
                                             repeat: true
                                             running: precipMap.viewSettled
                                                      && precipMap.prefetchStage < dashboard.radarFrames.length - 1
@@ -1333,8 +1321,8 @@ PanelWindow {
                                         Rectangle {
                                             anchors.bottom: parent.bottom
                                             anchors.left: parent.left
-                                            anchors.margins: 6
-                                            radius: 6
+                                            anchors.margins: Config.gap.sm
+                                            radius: Config.radius.md
                                             color: Qt.rgba(0, 0, 0, 0.45)
                                             width: hudRow.implicitWidth + 16
                                             height: hudRow.implicitHeight + 8
@@ -1343,12 +1331,12 @@ PanelWindow {
                                             RowLayout {
                                                 id: hudRow
                                                 anchors.centerIn: parent
-                                                spacing: 6
+                                                spacing: Config.gap.sm
                                                 Text {
                                                     text: precipMap.radarPlaying ? "" : ""
                                                     color: Colors.text
                                                     font.family: Config.bar.fontFamily
-                                                    font.pixelSize: Config.bar.fontSize - 8
+                                                    font.pixelSize: Config.type.label
                                                 }
                                                 Text {
                                                     text: precipMap.radarFrame
@@ -1357,7 +1345,7 @@ PanelWindow {
                                                         : ""
                                                     color: Colors.text
                                                     font.family: Config.bar.fontFamily
-                                                    font.pixelSize: Config.bar.fontSize - 8
+                                                    font.pixelSize: Config.type.label
                                                 }
                                             }
 
@@ -1370,11 +1358,11 @@ PanelWindow {
                                         Text {
                                             anchors.bottom: parent.bottom
                                             anchors.right: parent.right
-                                            anchors.margins: 4
+                                            anchors.margins: Config.gap.xs
                                             text: "© OSM © CARTO · RainViewer"
                                             color: Colors.border
                                             font.family: Config.bar.fontFamily
-                                            font.pixelSize: Config.bar.fontSize - 12
+                                            font.pixelSize: Config.type.micro
                                         }
                                     }
                                 }
@@ -1382,12 +1370,12 @@ PanelWindow {
                                 // 3-day forecast strip
                                 ColumnLayout {
                                     Layout.alignment: Qt.AlignHCenter
-                                    Layout.bottomMargin: 20
+                                    Layout.bottomMargin: Config.gap.lg
                                     Text {
                                         text: "WEATHER FORECAST"
                                         color: Colors.subtext
                                         font.family: Config.bar.fontFamily
-                                        font.pixelSize: Config.bar.fontSize
+                                        font.pixelSize: Config.type.lg                                        
                                         font.bold: true
                                         font.letterSpacing: 1.5
                                     }
@@ -1395,9 +1383,9 @@ PanelWindow {
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Layout.bottomMargin: 20
+                                    Layout.bottomMargin: Config.gap.lg
                                     Layout.alignment: Qt.AlignHCenter
-                                    spacing: 100
+                                    spacing: Config.gap.lg
 
                                     Repeater {
                                         model: 3
@@ -1405,7 +1393,7 @@ PanelWindow {
                                             required property int index
                                             property var fc: dashboard.weatherForecast[index] || null
                                             Layout.fillWidth: true
-                                            spacing: 2
+                                            spacing: Config.gap.xs
                                             visible: fc !== null
 
                                             Text {
@@ -1413,7 +1401,7 @@ PanelWindow {
                                                 text: fc ? fc.day : ""
                                                 color: Colors.subtext
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 4
+                                                font.pixelSize: Config.type.base
                                                 font.bold: true
                                                 font.letterSpacing: 1
                                             }
@@ -1422,14 +1410,14 @@ PanelWindow {
                                                 text: fc ? dashboard.weatherIcon(fc.desc) : ""
                                                 color: Colors.border
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize + 12
+                                                font.pixelSize: Config.type.display
                                             }
                                             Text {
                                                 Layout.alignment: Qt.AlignHCenter
                                                 text: fc ? fc.high + "° / " + fc.low + "°" : ""
                                                 color: Colors.subtext
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 4
+                                                font.pixelSize: Config.type.base
                                             }
                                         }
                                     }
@@ -1445,7 +1433,7 @@ PanelWindow {
                             text: "Notifications"
                             color: Colors.border
                             font.family: Config.bar.fontFamily
-                            font.pixelSize: Config.bar.fontSize
+                            font.pixelSize: Config.type.lg                            
                             font.bold: true
                         }
                         Text {
@@ -1453,7 +1441,7 @@ PanelWindow {
                             visible: historyModel && historyModel.count > 0
                             color: Colors.error
                             font.family: Config.bar.fontFamily
-                            font.pixelSize: Config.bar.fontSize - 4
+                            font.pixelSize: Config.type.base
                             font.bold: true
                             MouseArea {
                                 anchors.fill: parent
@@ -1467,9 +1455,9 @@ PanelWindow {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         text: "No notifications"
-                        color: Colors.accentAlt
+                        color: Colors.error
                         font.family: Config.bar.fontFamily
-                        font.pixelSize: Config.bar.fontSize - 2
+                        font.pixelSize: Config.type.md
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -1484,7 +1472,7 @@ PanelWindow {
                         ColumnLayout {
                             id: notifsCol
                             width: parent.width
-                            spacing: 8
+                            spacing: Config.gap.sm
 
                             Repeater {
                                 model: historyModel
@@ -1497,10 +1485,8 @@ PanelWindow {
                                     required property int index
 
                                     Layout.fillWidth: true
-                                    radius: 8
+                                    radius: Config.radius.xl
                                     color: Colors.card
-                                    border.width: 4
-                                    border.color: Colors.border
                                     implicitHeight: nc.implicitHeight + 24
 
                                     RowLayout {
@@ -1509,7 +1495,7 @@ PanelWindow {
                                             left: parent.left; right: parent.right
                                             top: parent.top; margins: 12
                                         }
-                                        spacing: 8
+                                        spacing: Config.gap.sm
 
                                         Item {
                                             Layout.preferredWidth: 48
@@ -1534,13 +1520,13 @@ PanelWindow {
 
                                         ColumnLayout {
                                             Layout.fillWidth: true
-                                            spacing: 4
+                                            spacing: Config.gap.xs
                                             Text {
                                                 Layout.fillWidth: true
                                                 text: summary
                                                 color: Colors.border
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 2
+                                                font.pixelSize: Config.type.md
                                                 font.bold: true
                                                 elide: Text.ElideRight
                                             }
@@ -1550,24 +1536,24 @@ PanelWindow {
                                                 text: body
                                                 color: Colors.subtext
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 4
+                                                font.pixelSize: Config.type.base
                                                 wrapMode: Text.WordWrap
                                             }
                                         }
 
                                         ColumnLayout {
-                                            spacing: 4
+                                            spacing: Config.gap.xs
                                             Text {
                                                 text: time
                                                 color: Colors.subtext 
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize - 6
+                                                font.pixelSize: Config.type.sm
                                             }
                                             Text {
                                                 text: ""
                                                 color: Colors.error
                                                 font.family: Config.bar.fontFamily
-                                                font.pixelSize: Config.bar.fontSize
+                                                font.pixelSize: Config.type.lg
                                                 font.bold: true
                                                 Layout.alignment: Qt.AlignRight
                                                 MouseArea {
@@ -1728,7 +1714,7 @@ PanelWindow {
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        radius: 10
+                        radius: Config.radius.xl
                         color: Colors.card
 
                         ColumnLayout {
@@ -1755,7 +1741,7 @@ PanelWindow {
                                 Rectangle {
                                     Layout.fillWidth: true
                                     height: 34
-                                    radius: 8
+                                    radius: Config.radius.lg
                                     color: Colors.border
 
                                     TextInput {
@@ -1790,7 +1776,7 @@ PanelWindow {
 
                                 Rectangle {
                                     width: 34; height: 34
-                                    radius: 8
+                                    radius: Config.radius.lg
                                     color: Colors.accent
 
                                     Text {
@@ -1835,7 +1821,7 @@ PanelWindow {
 
                                             Layout.fillWidth: true
                                             height: 38
-                                            radius: 8
+                                            radius: Config.radius.lg
                                             color: done ? Qt.rgba(1,1,1,0.03) : Qt.rgba(1,1,1,0.07)
 
                                             RowLayout {
@@ -1845,7 +1831,7 @@ PanelWindow {
                                                 spacing: 10
 
                                                 Rectangle {
-                                                    width: 18; height: 18; radius: 4
+                                                    width: 18; height: 18; radius: Config.radius.sm
                                                     color: done ? Colors.accent : "transparent"
                                                     border.width: 2
                                                     border.color: done ? Colors.accent : Colors.subtext
@@ -1927,6 +1913,16 @@ PanelWindow {
                             required property int index
                             property var player: modelData
 
+                            // Optimistic play/pause: flips instantly on click, reconciles with the
+                            // real MPRIS state once the player confirms (spotify_player's Spotify
+                            // Connect round trip can take ~1s)
+                            property bool optimisticPlaying: player ? player.isPlaying : false
+                            onPlayerChanged: optimisticPlaying = player ? player.isPlaying : false
+                            Connections {
+                                target: mediaCard.player
+                                function onIsPlayingChanged() { mediaCard.optimisticPlaying = mediaCard.player.isPlaying }
+                            }
+
                             property real mediaProgress: 0
                             property string mediaCurrentTime: "0:00"
 
@@ -1936,7 +1932,7 @@ PanelWindow {
                             }
 
                             Timer {
-                                interval: 1000
+                                interval: Config.timer.interval
                                 running: mediaCard.player && mediaCard.player.isPlaying
                                 repeat: true
                                 triggeredOnStart: true
@@ -1950,7 +1946,7 @@ PanelWindow {
 
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            radius: 12
+                            radius: Config.radius.xxl
                             color: Colors.inset
                             clip: true
 
@@ -1983,7 +1979,7 @@ PanelWindow {
                                             var growth = artArea.artSize * 0.05 * breathe
                                             var numRays = 36
                                             ctx.strokeStyle = "" + Colors.accent
-                                            ctx.lineWidth = Math.max(2, artArea.artSize * 0.02)
+                                            ctx.lineWidth = Math.max(3, artArea.artSize * 0.032)
                                             ctx.globalAlpha = 0.6
                                             ctx.lineCap = "round"
                                             for (var i = 0; i < numRays; i++) {
@@ -1999,7 +1995,7 @@ PanelWindow {
 
                                         // One revolution every 30s + ~2.4s breathe cycle while playing; freezes in place on pause
                                         FrameAnimation {
-                                            running: mediaCard.player && mediaCard.player.isPlaying
+                                            running: mediaCard.player && mediaCard.optimisticPlaying
                                             onTriggered: {
                                                 raysCanvas.rotation = (raysCanvas.rotation + frameTime * 12) % 360
                                                 raysCanvas.breathePhase = (raysCanvas.breathePhase + frameTime * 2.6) % (Math.PI * 2)
@@ -2096,14 +2092,14 @@ PanelWindow {
                                             color: Colors.accent
                                             Text {
                                                 anchors.centerIn: parent
-                                                text: mediaCard.player && mediaCard.player.isPlaying ? "" : ""
+                                                text: mediaCard.player && mediaCard.optimisticPlaying ? "" : ""
                                                 color: Colors.onAccent
                                                 font.family: Config.bar.fontFamily
                                                 font.pixelSize: Config.bar.fontSize + 10
                                             }
                                             MouseArea {
                                                 anchors.fill: parent
-                                                onClicked: if (mediaCard.player) mediaCard.player.togglePlaying()
+                                                onClicked: if (mediaCard.player) { mediaCard.optimisticPlaying = !mediaCard.optimisticPlaying; mediaCard.player.togglePlaying() }
                                             }
                                         }
 
@@ -2126,13 +2122,13 @@ PanelWindow {
                                         visible: mediaCard.player && mediaCard.player.lengthSupported && mediaCard.player.length > 0
                                         Rectangle {
                                             anchors.fill: parent
-                                            radius: 3
+                                            radius: Config.radius.xs
                                             color: Qt.rgba(1, 1, 1, 0.10)
                                         }
                                         Rectangle {
                                             width: parent.width * mediaCard.mediaProgress
                                             height: parent.height
-                                            radius: 3
+                                            radius: Config.radius.xs
                                             color: Colors.accent
                                             Behavior on width { NumberAnimation { duration: 900; easing.type: Easing.Linear } }
                                         }
@@ -2168,7 +2164,7 @@ PanelWindow {
                                         anchors.centerIn: parent
                                         width: Math.min(parent.width * 0.8, 160); height: width
                                         source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/assets/record.gif"
-                                        playing: mediaCard.player && mediaCard.player.isPlaying
+                                        playing: mediaCard.player && mediaCard.optimisticPlaying
                                         fillMode: Image.PreserveAspectFit
                                     }
                                 }
@@ -2210,7 +2206,7 @@ PanelWindow {
 
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
-                                radius: 10
+                                radius: Config.radius.xl
                                 color: Colors.inset
 
                                 ColumnLayout {
@@ -2319,7 +2315,7 @@ PanelWindow {
                         Rectangle {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            radius: 10
+                            radius: Config.radius.xl
                             color: Colors.inset
 
                             ColumnLayout {
@@ -2356,7 +2352,7 @@ PanelWindow {
                                                     anchors.bottom: parent.bottom
                                                     width: parent.width
                                                     height: Math.max(4, parent.height * parent.load / 100)
-                                                    radius: 4
+                                                    radius: Config.radius.sm
                                                     color: parent.load > 66 ? Colors.error
                                                          : parent.load > 33 ? Colors.accent
                                                          : Colors.accent2
@@ -2374,7 +2370,7 @@ PanelWindow {
                         Rectangle {
                             Layout.preferredWidth: Math.round(contentArea.width * 0.26)
                             Layout.fillHeight: true
-                            radius: 10
+                            radius: Config.radius.xl
                             color: Colors.inset
 
                             ColumnLayout {
