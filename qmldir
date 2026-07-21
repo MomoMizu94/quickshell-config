@@ -1,3 +1,14 @@
 singleton Colors Colors.qml
 Dashboard Dashboard.qml
 NotificationPopup NotificationPopup.qml
+DashboardTab Tabs/DashboardTab.qml
+CalendarTab Tabs/CalendarTab.qml
+MediaTab Tabs/MediaTab.qml
+PerformanceTab Tabs/PerformanceTab.qml
+GreetingCard Widgets/GreetingCard.qml
+SystemInfoCard Widgets/SystemInfoCard.qml
+QuickTogglesCard Widgets/QuickTogglesCard.qml
+MusicMiniCard Widgets/MusicMiniCard.qml
+HardwareCard Widgets/HardwareCard.qml
+WeatherCard Widgets/WeatherCard.qml
+NotificationHistoryCard Widgets/NotificationHistoryCard.qml
