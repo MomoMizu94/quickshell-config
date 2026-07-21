@@ -465,7 +465,7 @@ PanelWindow {
 
         Rectangle {
             anchors.fill: parent
-            radius: Config.radius.xl
+            radius: Config.radius.hero
             color: Colors.surface
         border.width: 8
         border.color: Colors.border
