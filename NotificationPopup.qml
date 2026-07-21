@@ -42,10 +42,10 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.preferredHeight: layout.implicitHeight + 28
                 radius: 8
-                color: Config.colors.LightTeal
+                color: Colors.surface
                 border.width: 8
                 border.color: modelData.urgency === NotificationUrgency.Critical
-                ? Config.colors.Red : Config.colors.DarkTeal
+                ? Colors.error : Colors.border
 
                 RowLayout {
                     id: layout
@@ -90,7 +90,7 @@ PanelWindow {
                         Text {
                             Layout.fillWidth: true
                             text: card.modelData.summary
-                            color: Config.colors.DarkTeal
+                            color: Colors.border
                             font.family: Config.bar.fontFamily
                             font.pixelSize: Config.bar.fontSize
                             font.bold: true
@@ -101,7 +101,7 @@ PanelWindow {
                             Layout.fillWidth: true
                             visible: text !== ""
                             text: card.modelData.body
-                            color: Config.colors.Grey
+                            color: Colors.subtext
                             font.family: Config.bar.fontFamily
                             font.pixelSize: Config.bar.fontSize - 4
                             wrapMode: Text.WordWrap

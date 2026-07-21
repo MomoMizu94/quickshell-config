@@ -1,0 +1,3 @@
+singleton Colors Colors.qml
+Dashboard Dashboard.qml
+NotificationPopup NotificationPopup.qml
