@@ -6,6 +6,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell.Widgets
 import QtQuick.Effects
+import QtQuick.Shapes
 
 import "config.js" as Config
 import "secrets.js" as Secrets
@@ -16,6 +17,11 @@ PanelWindow {
     signal closeRequested()
     property var historyModel
     property int activeTab: 0
+
+    property bool open: false
+    property bool closing: false
+    visible: open || closing
+    onOpenChanged: closing = !open
 
     property int calYear: new Date().getFullYear()
     property int calMonth: new Date().getMonth() + 1
@@ -457,19 +463,31 @@ PanelWindow {
     }
 
     Item {
-        anchors.top: parent.top
+        id: hero
         anchors.horizontalCenter: parent.horizontalCenter
         width: 1500
         height: 1200
+        y: dashboard.open ? 0 : -height
+
+        Behavior on y {
+            NumberAnimation {
+                duration: Config.anim.slide
+                easing.type: Easing.OutCubic
+                onRunningChanged: if (!running && !dashboard.open) dashboard.closing = false
+            }
+        }
 
         MouseArea { anchors.fill: parent }
 
         Rectangle {
             anchors.fill: parent
-            radius: Config.radius.hero
+            topLeftRadius: 0
+            topRightRadius: 0
+            bottomLeftRadius: Config.radius.hero
+            bottomRightRadius: Config.radius.hero
             color: Colors.surface
-        border.width: 8
-        border.color: Colors.border
+        //border.width: 8
+        //border.color: Colors.border
         clip: true
 
         ColumnLayout {

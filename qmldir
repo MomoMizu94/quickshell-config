@@ -3,6 +3,15 @@ Dashboard Dashboard.qml
 NotificationPopup NotificationPopup.qml
 FrameReserve FrameReserve.qml
 FrameShape FrameShape.qml
+Bar Bar.qml
+AppLauncher Bar/AppLauncher.qml
+Workspaces Bar/Workspaces.qml
+FocusedWindow Bar/FocusedWindow.qml
+Tray Bar/Tray.qml
+Clock Bar/Clock.qml
+BluetoothIndicator Bar/BluetoothIndicator.qml
+NetSpeedIndicator Bar/NetSpeedIndicator.qml
+PowerButton Bar/PowerButton.qml
 DashboardTab Tabs/DashboardTab.qml
 CalendarTab Tabs/CalendarTab.qml
 MediaTab Tabs/MediaTab.qml

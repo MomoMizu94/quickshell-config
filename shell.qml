@@ -71,7 +71,7 @@ Scope {
 
     Dashboard {
         id: dash
-        visible: root.centerOpen
+        open: root.centerOpen
         historyModel: history
         onCloseRequested: root.centerOpen = false
     }
@@ -80,4 +80,5 @@ Scope {
     FrameShape {
         onHoverOpenRequested: root.centerOpen = true
     }
+    Bar {}
 }

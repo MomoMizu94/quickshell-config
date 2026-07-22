@@ -48,6 +48,17 @@ const frame = {
     thick: 64,
 }
 
+// Sidebar (left-strip status bar) module sizing
+const sidebar = {
+    iconSize: 32,       // app launcher / power button glyph size
+    workspaceSize: 40,  // workspace chip diameter
+    trayIconSize: 20,   // tray IconImage width/height
+}
+
+const anim = {
+    slide: 600,   // dashboard open/close slide duration (ms)
+}
+
 const timer = {
     interval: 1000,              // general UI tick (clock, progress displays)
     weatherRefresh: 600000,      // 10 min
@@ -56,4 +67,6 @@ const timer = {
     mapPrefetchStagger: 1200,    // precip map: gap between warming each radar frame
     radarFrameAdvance: 650,      // radar loop: ms per frame
     radarFrameDwell: 2200,       // radar loop: dwell on the newest frame before looping
+    bluetoothRefresh: 5000,      // sidebar bluetooth status poll
+    netRefresh: 3000,            // sidebar net up/down poll
 }
