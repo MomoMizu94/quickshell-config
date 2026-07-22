@@ -3,6 +3,7 @@ import Quickshell.Wayland
 import Quickshell.Services.Notifications
 import Quickshell.Io
 import QtQuick
+import "config.js" as Config
 
 
 Scope {
@@ -73,5 +74,10 @@ Scope {
         visible: root.centerOpen
         historyModel: history
         onCloseRequested: root.centerOpen = false
+    }
+
+    FrameReserve {}
+    FrameShape {
+        onHoverOpenRequested: root.centerOpen = true
     }
 }

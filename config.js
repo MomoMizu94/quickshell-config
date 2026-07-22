@@ -1,5 +1,3 @@
-// Colors now live in Colors.qml (pywal-driven singleton)
-
 const bar = {
     fontFamily: "Mononoki Nerd Font",
     fontSize: 22,
@@ -43,6 +41,11 @@ const radius = {
 
 const notifications = {
     timeout: 7000
+}
+
+const frame = {
+    thin: 8,
+    thick: 64,
 }
 
 const timer = {

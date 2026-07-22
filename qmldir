@@ -1,6 +1,8 @@
 singleton Colors Colors.qml
 Dashboard Dashboard.qml
 NotificationPopup NotificationPopup.qml
+FrameReserve FrameReserve.qml
+FrameShape FrameShape.qml
 DashboardTab Tabs/DashboardTab.qml
 CalendarTab Tabs/CalendarTab.qml
 MediaTab Tabs/MediaTab.qml
