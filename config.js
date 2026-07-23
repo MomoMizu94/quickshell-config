@@ -50,13 +50,29 @@ const frame = {
 
 // Sidebar (left-strip status bar) module sizing
 const sidebar = {
-    iconSize: 32,       // app launcher / power button glyph size
-    workspaceSize: 40,  // workspace chip diameter
-    trayIconSize: 20,   // tray IconImage width/height
+    iconSize: 26,       // app launcher / power button glyph size
+    workspaceSize: 36,  // workspace chip diameter
+    trayIconSize: 26,   // tray IconImage width/height
+    workspaceAppIconSize: 26, // WorkspaceApps icon width/height
 }
 
 const anim = {
     slide: 600,   // dashboard open/close slide duration (ms)
+    popup: 600,   // launcher open/close pop duration (ms)
+    tabSlide: 600, // dashboard tab switch slide duration (ms)
+}
+
+// App launcher (command-palette) sizing
+const launcher = {
+    width: 820,
+    maxVisibleRows: 8,
+    rowHeight: 56,
+    inputHeight: 56,
+    iconSize: 36,
+    galleryPanelWidth: 1200,
+    galleryCardWidth: 340,
+    galleryCardHeight: 220,
+    galleryLabelHeight: 56,
 }
 
 const timer = {

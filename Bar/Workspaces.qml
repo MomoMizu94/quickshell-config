@@ -13,7 +13,7 @@ ColumnLayout {
     // ~/.config/waybar/config.jsonc. Falls back to the plain number for any
     // workspace outside this map.
     readonly property var icons: ({
-        1: "󰈹",
+        1: "󰣇",
         2: "󰶞",
         3: "󰚯",
         4: "󰓓",
@@ -27,12 +27,15 @@ ColumnLayout {
         model: Hyprland.workspaces
 
         delegate: Rectangle {
+            id: chip
             required property var modelData
+            property bool hovered: false
             Layout.alignment: Qt.AlignHCenter
             width: Config.sidebar.workspaceSize
             height: Config.sidebar.workspaceSize
             radius: Config.radius.md
-            color: modelData.active ? Colors.accent : "transparent"
+            color: modelData.active ? Colors.accent
+                : (chip.hovered ? Qt.rgba(Colors.text.r, Colors.text.g, Colors.text.b, 0.08) : "transparent")
 
             Text {
                 anchors.centerIn: parent
@@ -40,6 +43,15 @@ ColumnLayout {
                 color: modelData.active ? Colors.onAccent : Colors.subtext
                 font.family: Config.bar.fontFamily
                 font.pixelSize: Config.sidebar.iconSize
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onEntered: chip.hovered = true
+                onExited: chip.hovered = false
+                onClicked: Hyprland.dispatch("workspace " + chip.modelData.id)
             }
         }
     }

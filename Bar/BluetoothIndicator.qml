@@ -32,6 +32,6 @@ Item {
         text: "󰂯"
         color: root.enabled ? Colors.accent : Colors.subtext
         font.family: Config.bar.fontFamily
-        font.pixelSize: Config.type.md
+        font.pixelSize: Config.sidebar.iconSize
     }
 }

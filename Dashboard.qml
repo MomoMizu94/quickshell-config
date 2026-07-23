@@ -564,27 +564,47 @@ PanelWindow {
                 clip: true
 
                 DashboardTab {
-                    anchors.fill: parent
-                    visible: dashboard.activeTab === 0
+                    y: 0
+                    width: contentArea.width
+                    height: contentArea.height
+                    x: (0 - dashboard.activeTab) * contentArea.width
                     dashboard: dashboard
+                    Behavior on x {
+                        NumberAnimation { duration: Config.anim.tabSlide; easing.type: Easing.OutCubic }
+                    }
                 }
 
                 CalendarTab {
-                    anchors.fill: parent
-                    visible: dashboard.activeTab === 1
+                    y: 0
+                    width: contentArea.width
+                    height: contentArea.height
+                    x: (1 - dashboard.activeTab) * contentArea.width
                     dashboard: dashboard
+                    Behavior on x {
+                        NumberAnimation { duration: Config.anim.tabSlide; easing.type: Easing.OutCubic }
+                    }
                 }
 
                 MediaTab {
-                    anchors.fill: parent
-                    visible: dashboard.activeTab === 2
+                    y: 0
+                    width: contentArea.width
+                    height: contentArea.height
+                    x: (2 - dashboard.activeTab) * contentArea.width
                     dashboard: dashboard
+                    Behavior on x {
+                        NumberAnimation { duration: Config.anim.tabSlide; easing.type: Easing.OutCubic }
+                    }
                 }
 
                 PerformanceTab {
-                    anchors.fill: parent
-                    visible: dashboard.activeTab === 3
+                    y: 0
+                    width: contentArea.width
+                    height: contentArea.height
+                    x: (3 - dashboard.activeTab) * contentArea.width
                     dashboard: dashboard
+                    Behavior on x {
+                        NumberAnimation { duration: Config.anim.tabSlide; easing.type: Easing.OutCubic }
+                    }
                 }
             }
         }

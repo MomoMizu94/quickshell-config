@@ -6,24 +6,60 @@ import "../config.js" as Config
 ColumnLayout {
     id: root
     Layout.alignment: Qt.AlignHCenter
-    spacing: 0
+    spacing: 4
 
-    property string time: ""
+    property string hour: ""
+    property string minute: ""
+    property string ampm: ""
 
     Timer {
         interval: Config.timer.interval
         running: true
         repeat: true
         triggeredOnStart: true
-        onTriggered: root.time = Qt.formatTime(new Date(), "HH:mm")
+        onTriggered: {
+            // Qt.formatTime only resolves "h" as 12-hour when "AP" is present in
+            // the same format string — formatting each token separately silently
+            // falls back to 24-hour for "h" alone. Format together, then split.
+            const parts = Qt.formatTime(new Date(), "h|mm|AP").split("|")
+            root.hour = parts[0]
+            root.minute = parts[1]
+            root.ampm = parts[2]
+        }
     }
 
     Text {
         Layout.alignment: Qt.AlignHCenter
-        text: root.time
+        text: "󰥔"
         color: Colors.text
         font.family: Config.bar.fontFamily
-        font.pixelSize: Config.type.sm
+        font.pixelSize: Config.sidebar.iconSize
         font.bold: true
+    }
+
+    Text {
+        Layout.alignment: Qt.AlignHCenter
+        text: root.hour
+        color: Colors.text
+        font.family: Config.bar.fontFamily
+        font.pixelSize: Config.type.lg
+        font.bold: true
+    }
+
+    Text {
+        Layout.alignment: Qt.AlignHCenter
+        text: root.minute
+        color: Colors.text
+        font.family: Config.bar.fontFamily
+        font.pixelSize: Config.type.lg
+        font.bold: true
+    }
+
+    Text {
+        Layout.alignment: Qt.AlignHCenter
+        text: root.ampm
+        color: Colors.subtext
+        font.family: Config.bar.fontFamily
+        font.pixelSize: Config.type.md
     }
 }

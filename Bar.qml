@@ -22,20 +22,31 @@ PanelWindow {
     implicitWidth: Config.frame.thick
 
     ColumnLayout {
-        anchors.fill: parent
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
         anchors.margins: Config.gap.sm
         spacing: Config.gap.md
 
-        AppLauncher {}
         Workspaces {}
-        FocusedWindow {}
+    }
+
+    WorkspaceApps {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
+    }
+
+    ColumnLayout {
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.margins: Config.gap.sm
+        spacing: Config.gap.md
+
         Tray {}
         Clock {}
         BluetoothIndicator {}
         NetSpeedIndicator {}
-
-        Item { Layout.fillHeight: true }
-
         PowerButton {}
     }
 }

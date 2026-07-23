@@ -1,3 +1,4 @@
+//@ pragma UseQApplication
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Services.Notifications
@@ -10,6 +11,7 @@ Scope {
     id: root
 
     property bool centerOpen: false
+    property bool launcherOpen: false
 
     ListModel { id: history }
 
@@ -64,6 +66,13 @@ Scope {
         function hide(): void { root.centerOpen = false }
     }
 
+    IpcHandler {
+        target: "launcher"
+        function toggle(): void { root.launcherOpen = !root.launcherOpen }
+        function show(): void { root.launcherOpen = true }
+        function hide(): void { root.launcherOpen = false }
+    }
+
     NotificationPopup {
         notifModel: server.trackedNotifications
         dndEnabled: dash.dndEnabled
@@ -76,9 +85,16 @@ Scope {
         onCloseRequested: root.centerOpen = false
     }
 
+    AppLauncher {
+        id: launcher
+        open: root.launcherOpen
+        onCloseRequested: root.launcherOpen = false
+    }
+
     FrameReserve {}
     FrameShape {
         onHoverOpenRequested: root.centerOpen = true
+        onLauncherHoverRequested: root.launcherOpen = true
     }
     Bar {}
 }

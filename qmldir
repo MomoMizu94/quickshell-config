@@ -1,12 +1,12 @@
 singleton Colors Colors.qml
 Dashboard Dashboard.qml
+AppLauncher AppLauncher.qml
 NotificationPopup NotificationPopup.qml
 FrameReserve FrameReserve.qml
 FrameShape FrameShape.qml
 Bar Bar.qml
-AppLauncher Bar/AppLauncher.qml
 Workspaces Bar/Workspaces.qml
-FocusedWindow Bar/FocusedWindow.qml
+WorkspaceApps Bar/WorkspaceApps.qml
 Tray Bar/Tray.qml
 Clock Bar/Clock.qml
 BluetoothIndicator Bar/BluetoothIndicator.qml

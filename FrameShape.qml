@@ -12,6 +12,7 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
 
     signal hoverOpenRequested()
+    signal launcherHoverRequested()
 
     anchors {
         top: true
@@ -98,6 +99,20 @@ PanelWindow {
 
         HoverHandler {
             onHoveredChanged: if (hovered) root.hoverOpenRequested()
+        }
+    }
+
+    // Bottom-center hover hot-zone that spawns the app launcher. Same reasoning
+    // as the top zone above — the bottom border strip (y: height-thin..height)
+    // is the only other part of this surface `mask` doesn't subtract.
+    Item {
+        width: 600
+        height: Config.frame.thin
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: root.height - Config.frame.thin
+
+        HoverHandler {
+            onHoveredChanged: if (hovered) root.launcherHoverRequested()
         }
     }
 }
